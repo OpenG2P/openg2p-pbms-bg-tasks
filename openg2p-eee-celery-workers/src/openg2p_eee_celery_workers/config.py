@@ -1,4 +1,3 @@
-from typing import Dict
 
 from openg2p_fastapi_common.config import Settings as BaseSettings
 from pydantic_settings import SettingsConfigDict
@@ -20,7 +19,9 @@ class Settings(BaseSettings):
     openapi_version: str = __version__
 
     db_datasource_eee: str = "postgresql://postgres:postgres@localhost:5432/eeedb"
-    db_datasource_sr: str = "postgresql://postgres:postgres@localhost:5432/socialregistrydb"
+    db_datasource_sr: str = (
+        "postgresql://postgres:postgres@localhost:5432/socialregistrydb"
+    )
     db_datasource_pbms: str = "postgresql://postgres:postgres@localhost:5432/pbmsdb"
 
     celery_broker_url: str = "redis://localhost:6379/0"

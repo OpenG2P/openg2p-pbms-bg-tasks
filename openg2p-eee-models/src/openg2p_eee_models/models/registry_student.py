@@ -10,7 +10,9 @@ class G2PStudentRegistry(BaseORMModel):
 
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
     unique_id = mapped_column(String, nullable=True)
-    registration_date = mapped_column(DateTime, default=datetime.utcnow(), nullable=False)
+    registration_date = mapped_column(
+        DateTime, default=datetime.utcnow(), nullable=False
+    )
     name = mapped_column(String, nullable=False)
     institution_name = mapped_column(String, nullable=True)
     date_of_birth = mapped_column(DateTime, nullable=True)

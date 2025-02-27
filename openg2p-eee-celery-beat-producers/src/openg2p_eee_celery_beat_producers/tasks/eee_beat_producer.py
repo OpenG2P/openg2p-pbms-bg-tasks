@@ -22,7 +22,10 @@ def eee_beat_producer():
         pending_entries = (
             session.execute(
                 select(G2PQueEligibilityRequest)
-                .filter(G2PQueEligibilityRequest.enumeration_status == EnumStatus.PENDING.value)
+                .filter(
+                    G2PQueEligibilityRequest.enumeration_status
+                    == EnumStatus.PENDING.value
+                )
                 .limit(_config.batch_size)
             )
             .scalars()
