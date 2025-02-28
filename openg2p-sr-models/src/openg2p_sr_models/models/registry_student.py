@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from openg2p_fastapi_common.models import BaseORMModel
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import Date, DateTime, Integer, String
 from sqlalchemy.orm import mapped_column
 
 
@@ -15,4 +15,4 @@ class G2PStudentRegistry(BaseORMModel):
     )
     name = mapped_column(String, nullable=False)
     institution_name = mapped_column(String, nullable=True)
-    date_of_birth = mapped_column(DateTime, nullable=True)
+    date_of_birth = mapped_column(Date, nullable=True)
