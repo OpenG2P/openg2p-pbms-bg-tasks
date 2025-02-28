@@ -12,14 +12,14 @@ _logger = logging.getLogger(_config.logging_default_logger_name)
 _engine = get_engine()
 
 
-@celery_app.task(name="eee_beat_producer")
-def eee_beat_producer():
+@celery_app.task(name="eligibility_request_beat_producer")
+def eligibility_request_beat_producer():
     _logger.info("Checking for pending eligibility requests")
     session_maker = sessionmaker(bind=_engine, expire_on_commit=False)
 
     with session_maker() as session:
         # Fetch rows with PENDING status
-        pending_entries = (
+        pending_eligibility_requests = (
             session.execute(
                 select(G2PQueEligibilityRequest)
                 .filter(
@@ -32,14 +32,14 @@ def eee_beat_producer():
             .all()
         )
 
-        for entry in pending_entries:
-            _logger.info(f"Queueing eligibility request ID: {entry.id}")
+        for request in pending_eligibility_requests:
+            _logger.info(f"Queueing eligibility request ID: {request.id}")
 
             # Send task to Celery worker
             celery_app.send_task(
                 "eligibility_request_worker",
-                args=(entry.id,),
-                queue="eligibility_request_queue",
+                args=(request.id,),
+                queue=_config.eligibility_request_queue,
             )
 
     _logger.info("Completed processing pending eligibility requests")

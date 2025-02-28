@@ -1,1 +1,1 @@
-from .eee_beat_producer import eee_beat_producer
+from .eligibility_request_beat_producer import eligibility_request_beat_producer

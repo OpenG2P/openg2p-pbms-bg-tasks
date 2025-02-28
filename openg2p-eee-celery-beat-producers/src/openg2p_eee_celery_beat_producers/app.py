@@ -31,8 +31,8 @@ celery_app = Celery(
 )
 
 celery_app.conf.beat_schedule = {
-    "eee_beat_producer": {
-        "task": "eee_beat_producer",
+    "eligibility_request_beat_producer": {
+        "task": "eligibility_request_beat_producer",
         "schedule": _config.producer_frequency,
     },
 }
