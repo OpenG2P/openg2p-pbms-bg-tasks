@@ -22,7 +22,9 @@ class Settings(BaseSettings):
 
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"
+
     eligibility_request_queue: str = "eligibility_request_queue"
+    eligibility_request_worker: str = "eligibility_request_worker"
 
     producer_frequency: int = 10
     batch_size: int = 10000

@@ -31,13 +31,14 @@ def eligibility_request_beat_producer():
             .scalars()
             .all()
         )
+        _logger.debug(f"Found {len(pending_eligibility_requests)} pending requests")
 
         for request in pending_eligibility_requests:
             _logger.info(f"Queueing eligibility request ID: {request.id}")
 
             # Send task to Celery worker
             celery_app.send_task(
-                "eligibility_request_worker",
+                _config.eligibility_request_worker,
                 args=(request.id,),
                 queue=_config.eligibility_request_queue,
             )
