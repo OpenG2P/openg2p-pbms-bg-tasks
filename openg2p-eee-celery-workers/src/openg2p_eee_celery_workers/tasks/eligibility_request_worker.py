@@ -1,23 +1,21 @@
 import logging
 from datetime import datetime
 
-from openg2p_eee_models.models import (
+from openg2p_eee_eligibility_summary.factory import EligibilitySummaryFactory
+from openg2p_eee_eligibility_summary.interface import SummaryComputationInterface
+from openg2p_eee_models.models import G2PEligibilitySummary
+from openg2p_pbms_models.models import (
     EnumStatus,
-    G2PFarmerRegistry,
     G2PProgramDefinition,
     G2PQueEligibilityRequest,
-    G2PRegistryType,
-    G2PStudentRegistry,
 )
-from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
 from ..helpers import (
-    construct_farmer_summary_statistics,
     construct_intersect_query,
-    construct_student_summary_statistics,
+    persist_g2p_eligibility_details,
 )
 
 _config = Settings.get_config()
@@ -39,107 +37,113 @@ def eligibility_request_worker(id: int):
     )
 
     with eee_session_maker() as eee_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
-        queue_entry = None
+        g2p_que_eligibility_request = None
         try:
-            queue_entry = (
+            g2p_que_eligibility_request = (
                 pbms_session.query(G2PQueEligibilityRequest)
                 .filter(G2PQueEligibilityRequest.id == id)
                 .first()
             )
 
-            if not queue_entry:
+            if not g2p_que_eligibility_request:
                 _logger.error(f"No queue entry found for queue id: {id}")
                 return
-            sql_query_json = queue_entry.sql_query_json
-            program_id = queue_entry.program_id
 
-            program = (
+            g2p_program_definition = (
                 pbms_session.query(G2PProgramDefinition)
-                .filter(G2PProgramDefinition.id == program_id)
+                .filter(
+                    G2PProgramDefinition.id == g2p_que_eligibility_request.program_id
+                )
                 .first()
             )
-            registrant_type = program.target_registry_type
-            program_mnemonic = program.program_mnemonic
 
             # Construct and execute the SQL query
-            constructed_query = construct_intersect_query(sql_query_json)
-            result = []
+            constructed_query = construct_intersect_query(
+                g2p_que_eligibility_request.sql_query_json
+            )
+            _logger.debug(
+                f"Constructed sql query for queue id {id} is: {constructed_query}"
+            )
+
+            registrant_ids = []
             cursor = sr_session.execute(constructed_query)
             while True:
                 batch = cursor.fetchmany(_config.batch_size)
                 if not batch:
                     break
                 for row in batch:
-                    result.extend(row)
+                    registrant_ids.extend(row)
 
-            registrant_ids = [row[0] for row in result]
+            _logger.debug(
+                f"Count of registrant IDs for queue id {id} are: {len(registrant_ids)}"
+            )
 
-            # Add entries to g2p_eligibility_details table
             _logger.info(f"Adding eligibility details table for queue id: {id}")
-            for registrant_id in registrant_ids:
-                eee_session.execute(
-                    text(
-                        "INSERT INTO g2p_eligibility_details (eligibility_list_id, registrant_id) VALUES (:eligibility_list_id, :registrant_id)"
-                    ),
-                    {
-                        "eligibility_list_id": queue_entry.id,
-                        "registrant_id": registrant_id,
-                    },
-                )
+            persist_g2p_eligibility_details(
+                registrant_ids, g2p_que_eligibility_request.id, eee_session
+            )
 
-            # Construct summary statistics
             _logger.info(f"Adding summary statistics for queue id: {id}")
+
             base_summary = {
-                "program_id": program_id,
-                "program_mnemonic": program_mnemonic,
-                "target_registry_type": registrant_type,
+                "program_id": g2p_que_eligibility_request.program_id,
+                "program_mnemonic": g2p_program_definition.program_mnemonic,
+                "target_registry_type": g2p_program_definition.target_registry_type,
                 "eligibility_request_id": id,
                 "number_of_registrants": len(registrant_ids),
                 "date_created": datetime.utcnow(),
             }
-            if registrant_type == G2PRegistryType.FARMER.value:
-                registrant_data = (
-                    sr_session.query(G2PFarmerRegistry)
-                    .filter(G2PFarmerRegistry.id.in_(registrant_ids))
-                    .all()
+            base_summary = G2PEligibilitySummary(
+                program_id=g2p_que_eligibility_request.program_id,
+                program_mnemonic=g2p_program_definition.program_mnemonic,
+                target_registry_type=g2p_program_definition.target_registry_type,
+                eligibility_request_id=id,
+                number_of_registrants=len(registrant_ids),
+                date_created=datetime.utcnow(),
+            )
+
+            try:
+                # Get the appropriate summary computation class
+                summary_computation_interface: SummaryComputationInterface = (
+                    EligibilitySummaryFactory.get_summary_computation_class(
+                        g2p_program_definition.target_registry_type
+                    )
                 )
 
-                farmer_summary = construct_farmer_summary_statistics(
-                    base_summary, registrant_data
-                )
-                eee_session.add(farmer_summary)
-
-            elif registrant_type == G2PRegistryType.STUDENT.value:
-                registrant_data = (
-                    sr_session.query(G2PStudentRegistry)
-                    .filter(G2PStudentRegistry.id.in_(registrant_ids))
-                    .all()
+                # Compute summary and add to session
+                summary_computation_interface.compute_and_persist_summary(
+                    registrant_ids, base_summary, sr_session, eee_session
                 )
 
-                student_summary = construct_student_summary_statistics(
-                    base_summary, registrant_data
+                _logger.info(
+                    f"Summary statistics added successfully for queue id: {id}"
                 )
-                eee_session.add(student_summary)
 
-            else:
+            except ValueError as e:
                 _logger.error(
-                    f"Invalid registrant type set for program_id: {program_id}"
+                    f"Invalid registrant type for program_id {g2p_que_eligibility_request.program_id}: {e}"
                 )
+                return
+
+            except Exception as e:
+                _logger.error(
+                    f"Error computing summary statistics for queue id {id}: {e}"
+                )
+                return
+
+            # Update queue entry status
+            g2p_que_eligibility_request.enumeration_status = EnumStatus.COMPLETE.value
+            g2p_que_eligibility_request.processed_date = datetime.utcnow()
 
             eee_session.commit()
-
-            # Update queue entry statuses
-            queue_entry.enumeration_status = EnumStatus.COMPLETE.value
-            queue_entry.processed_date = datetime.utcnow()
-
             pbms_session.commit()
 
         except Exception as e:
             error_message = f"Error during processing eligibility request for queue id {id}: {str(e)}"
             _logger.error(error_message)
 
-            if queue_entry:
-                queue_entry.processed_date = datetime.utcnow()
+            if g2p_que_eligibility_request:
+                g2p_que_eligibility_request.processed_date = datetime.utcnow()
                 # queue_entry.task_status = EnumStatus.FAILED
                 pbms_session.commit()
 
