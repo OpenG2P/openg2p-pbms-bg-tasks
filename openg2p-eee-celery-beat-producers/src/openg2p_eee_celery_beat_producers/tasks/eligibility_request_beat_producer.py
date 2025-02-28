@@ -1,6 +1,6 @@
 import logging
 
-from openg2p_eee_models.models import EnumStatus, G2PQueEligibilityRequest
+from openg2p_pbms_models.models import EnumStatus, G2PQueEligibilityRequest
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
