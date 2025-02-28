@@ -15,6 +15,8 @@ class SummaryComputationInterface(ABC):
         raise NotImplementedError("Subclasses must implement fetch_registrants()")
 
     @abstractmethod
-    def compute_and_persist_summary(self, base_summary, sr_session: Session, eee_session: Session):
+    def compute_and_persist_summary(
+        self, base_summary, sr_session: Session, eee_session: Session
+    ):
         # Abstract method to compute summary statistics
         raise NotImplementedError("Subclasses must implement compute_summary()")

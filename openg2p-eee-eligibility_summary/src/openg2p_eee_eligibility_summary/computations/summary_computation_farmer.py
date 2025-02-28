@@ -12,11 +12,19 @@ class SummaryComputationFarmer(SummaryComputationInterface):
     """Fetches farmer data and computes summary statistics"""
 
     def fetch_registrants(self, registrant_ids, sr_session) -> List[G2PFarmerRegistry]:
-        return sr_session.query(G2PFarmerRegistry).filter(G2PFarmerRegistry.id.in_(registrant_ids)).all()
+        return (
+            sr_session.query(G2PFarmerRegistry)
+            .filter(G2PFarmerRegistry.id.in_(registrant_ids))
+            .all()
+        )
 
-    def compute_and_persist_summary(self, registrant_ids, base_summary, sr_session: Session, eee_session: Session):
+    def compute_and_persist_summary(
+        self, registrant_ids, base_summary, sr_session: Session, eee_session: Session
+    ):
         registrants = self.fetch_registrants(registrant_ids, sr_session)
-        land_areas = [farmer.land_area for farmer in registrants if farmer.land_area is not None]
+        land_areas = [
+            farmer.land_area for farmer in registrants if farmer.land_area is not None
+        ]
 
         farmer_summary = G2PEligibilitySummaryFarmer(
             program_id=base_summary.program_id,
@@ -30,9 +38,14 @@ class SummaryComputationFarmer(SummaryComputationInterface):
         if land_areas:
             land_areas_array = np.array(land_areas)
             farmer_summary.land_holding_mean = float(np.mean(land_areas_array))
-            farmer_summary.land_holding_quartile_25 = float(np.percentile(land_areas_array, 25, method="midpoint"))
-            farmer_summary.land_holding_quartile_50 = float(np.percentile(land_areas_array, 50, method="midpoint"))
-            farmer_summary.land_holding_quartile_75 = float(np.percentile(land_areas_array, 75, method="midpoint"))
+            farmer_summary.land_holding_quartile_25 = float(
+                np.percentile(land_areas_array, 25, method="midpoint")
+            )
+            farmer_summary.land_holding_quartile_50 = float(
+                np.percentile(land_areas_array, 50, method="midpoint")
+            )
+            farmer_summary.land_holding_quartile_75 = float(
+                np.percentile(land_areas_array, 75, method="midpoint")
+            )
 
         eee_session.add(farmer_summary)
-
