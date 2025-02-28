@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"
 
+    batch_size: int = 10000
+
     # Authentication parameters
     # auth_url: str = "https://idgenerator.loadtest.openg2p.org/v1/idgenerator/token"
     # auth_client_id: str = "idgenerator"

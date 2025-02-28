@@ -63,7 +63,14 @@ def eligibility_request_worker(id: int):
 
             # Construct and execute the SQL query
             constructed_query = construct_intersect_query(sql_query_json)
-            result = sr_session.execute(constructed_query).fetchall()
+            result = []
+            cursor = sr_session.execute(constructed_query)
+            while True:
+                batch = cursor.fetchmany(_config.batch_size)
+                if not batch:
+                    break
+                for row in batch:
+                    result.extend(row)
 
             registrant_ids = [row[0] for row in result]
 
