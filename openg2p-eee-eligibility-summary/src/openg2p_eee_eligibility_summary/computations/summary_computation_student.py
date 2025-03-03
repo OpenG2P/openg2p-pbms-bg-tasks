@@ -12,7 +12,16 @@ from ..interface import SummaryComputationInterface
 class SummaryComputationStudent(SummaryComputationInterface):
     """Fetches student data and computes summary statistics"""
 
-    def fetch_registrants(self, registrant_ids, sr_session) -> List[G2PStudentRegistry]:
+    def get_summary(
+        self, request_id: int, eee_session: Session
+    ) -> G2PEligibilitySummaryStudent:
+        return (
+            eee_session.query(G2PEligibilitySummaryStudent)
+            .filter(G2PEligibilitySummaryStudent.eligibility_request_id == request_id)
+            .first()
+        )
+
+    def get_registrants(self, registrant_ids, sr_session) -> List[G2PStudentRegistry]:
         return (
             sr_session.query(G2PStudentRegistry)
             .filter(G2PStudentRegistry.id.in_(registrant_ids))
@@ -22,7 +31,7 @@ class SummaryComputationStudent(SummaryComputationInterface):
     def compute_and_persist_summary(
         self, registrant_ids, base_summary, sr_session: Session, eee_session: Session
     ):
-        registrants = self.fetch_registrants(registrant_ids, sr_session)
+        registrants = self.get_registrants(registrant_ids, sr_session)
         students_age = [
             self.calculate_age(student.date_of_birth)
             for student in registrants

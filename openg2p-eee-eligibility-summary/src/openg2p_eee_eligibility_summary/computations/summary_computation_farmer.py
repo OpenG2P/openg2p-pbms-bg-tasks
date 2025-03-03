@@ -11,7 +11,14 @@ from ..interface import SummaryComputationInterface
 class SummaryComputationFarmer(SummaryComputationInterface):
     """Fetches farmer data and computes summary statistics"""
 
-    def fetch_registrants(self, registrant_ids, sr_session) -> List[G2PFarmerRegistry]:
+    def get_summary(self, request_id: int, eee_session: Session):
+        return (
+            eee_session.query(G2PEligibilitySummaryFarmer)
+            .filter(G2PEligibilitySummaryFarmer.eligibility_request_id == request_id)
+            .first()
+        )
+
+    def get_registrants(self, registrant_ids, sr_session) -> List[G2PFarmerRegistry]:
         return (
             sr_session.query(G2PFarmerRegistry)
             .filter(G2PFarmerRegistry.id.in_(registrant_ids))
@@ -21,7 +28,7 @@ class SummaryComputationFarmer(SummaryComputationInterface):
     def compute_and_persist_summary(
         self, registrant_ids, base_summary, sr_session: Session, eee_session: Session
     ):
-        registrants = self.fetch_registrants(registrant_ids, sr_session)
+        registrants = self.get_registrants(registrant_ids, sr_session)
         land_areas = [
             farmer.land_area for farmer in registrants if farmer.land_area is not None
         ]
