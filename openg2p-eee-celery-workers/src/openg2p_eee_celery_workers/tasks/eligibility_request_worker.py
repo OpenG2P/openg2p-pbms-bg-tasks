@@ -39,6 +39,7 @@ def eligibility_request_worker(id: int):
     with eee_session_maker() as eee_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
         g2p_que_eligibility_request = None
         try:
+            # Fetch the queue entry from pbms db using id
             g2p_que_eligibility_request = (
                 pbms_session.query(G2PQueEligibilityRequest)
                 .filter(G2PQueEligibilityRequest.id == id)
@@ -83,16 +84,9 @@ def eligibility_request_worker(id: int):
                 registrant_ids, g2p_que_eligibility_request.id, eee_session
             )
 
-            _logger.info(f"Adding summary statistics for queue id: {id}")
+            _logger.info(f"Computing and adding summary statistics for queue id: {id}")
 
-            base_summary = {
-                "program_id": g2p_que_eligibility_request.program_id,
-                "program_mnemonic": g2p_program_definition.program_mnemonic,
-                "target_registry_type": g2p_program_definition.target_registry_type,
-                "eligibility_request_id": id,
-                "number_of_registrants": len(registrant_ids),
-                "date_created": datetime.utcnow(),
-            }
+            # Create base summary object
             base_summary = G2PEligibilitySummary(
                 program_id=g2p_que_eligibility_request.program_id,
                 program_mnemonic=g2p_program_definition.program_mnemonic,
@@ -101,6 +95,7 @@ def eligibility_request_worker(id: int):
                 number_of_registrants=len(registrant_ids),
                 date_created=datetime.utcnow(),
             )
+            _logger.debug(f"Base summary for queue id {id} is: {base_summary}")
 
             try:
                 # Get the appropriate summary computation class
@@ -131,7 +126,7 @@ def eligibility_request_worker(id: int):
                 )
                 return
 
-            # Update queue entry status
+            # Update eligibility request queue entry status
             g2p_que_eligibility_request.enumeration_status = EnumStatus.COMPLETE.value
             g2p_que_eligibility_request.processed_date = datetime.utcnow()
 
