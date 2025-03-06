@@ -5,10 +5,8 @@ import numpy as np
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
-from openg2p_eee_registry_adapters.models import EligibilitySummaryStudent
-
 from ..interface import EEERegistryInterface
-from ..models import G2PStudentRegistry
+from ..models import EligibilitySummaryStudent, G2PStudentRegistry
 from ..schema import EligibilitySummaryStudentResponse
 
 

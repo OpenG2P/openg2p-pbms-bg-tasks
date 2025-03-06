@@ -1,9 +1,9 @@
 from typing import Optional
 
-from .registry import G2PRegistry
+from .registry import G2PRegistryResponse
 
 
-class G2PFarmerRegistry(G2PRegistry):
+class G2PFarmerRegistryResponse(G2PRegistryResponse):
     name: str
     land_area: Optional[float]
     no_of_cattle_heads: Optional[int]

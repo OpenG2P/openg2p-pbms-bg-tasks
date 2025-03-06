@@ -1,17 +1,9 @@
-from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from .eligibility_summary import EligibilitySummaryResponse
 
 
-class EligibilitySummaryStudentResponse(BaseModel):
-    id: int
-    program_id: int
-    program_mnemonic: str
-    target_registry_type: str
-    eligibility_request_id: int
-    number_of_registrants: int
-    date_created: Optional[datetime]
+class EligibilitySummaryStudentResponse(EligibilitySummaryResponse):
     age_mean: Optional[float]
     age_quartile_25: Optional[float]
     age_quartile_50: Optional[float]

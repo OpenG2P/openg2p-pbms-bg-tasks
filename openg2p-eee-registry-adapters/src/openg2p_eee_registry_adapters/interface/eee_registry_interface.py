@@ -1,16 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from openg2p_pbms_models.models import G2PRegistry
 from sqlalchemy.orm import Session
 
-from ..schema import G2PRegistry
+from ..schema import EligibilitySummaryResponse
 
 
 class EEERegistryInterface(ABC):
     """Interface for computing summary statistics"""
 
     @abstractmethod
-    async def get_summary(self, request_id: int, eee_session: Session):
+    async def get_summary(
+        self, request_id: int, eee_session: Session
+    ) -> EligibilitySummaryResponse:
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary()")
 

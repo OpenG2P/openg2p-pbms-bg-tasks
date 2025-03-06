@@ -5,10 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
 from ..interface import EEERegistryInterface
-from ..models import (
-    EligibilitySummaryFarmer,
-    G2PFarmerRegistry,
-)
+from ..models import EligibilitySummaryFarmer, G2PFarmerRegistry
 from ..schema import EligibilitySummaryFarmerResponse
 
 

@@ -1,5 +1,5 @@
 from .eligibility_summary_farmer import EligibilitySummaryFarmer
 from .eligibility_summary_student import EligibilitySummaryStudent
-from .registry import G2PRegistryType
 from .registry_farmer import G2PFarmerRegistry
 from .registry_student import G2PStudentRegistry
+from .registry_type import G2PRegistryType
