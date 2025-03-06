@@ -1,13 +1,13 @@
 import logging
 from datetime import datetime
 
-from openg2p_eee_eligibility_summary.factory import EligibilitySummaryFactory
-from openg2p_eee_eligibility_summary.interface import SummaryComputationInterface
-from openg2p_eee_models.models import G2PEligibilitySummary
+from openg2p_eee_models.models import EEESummary
+from openg2p_eee_registry_adapters.factory import EEERegistryFactory
+from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_pbms_models.models import (
     EnumStatus,
     G2PProgramDefinition,
-    G2PQueEligibilityRequest,
+    G2PQueEEERequest,
 )
 from sqlalchemy.orm import sessionmaker
 
@@ -41,8 +41,8 @@ def eligibility_request_worker(id: int):
         try:
             # Fetch the queue entry from pbms db using id
             g2p_que_eligibility_request = (
-                pbms_session.query(G2PQueEligibilityRequest)
-                .filter(G2PQueEligibilityRequest.id == id)
+                pbms_session.query(G2PQueEEERequest)
+                .filter(G2PQueEEERequest.id == id)
                 .first()
             )
 
@@ -87,7 +87,7 @@ def eligibility_request_worker(id: int):
             _logger.info(f"Computing and adding summary statistics for queue id: {id}")
 
             # Create base summary object
-            base_summary = G2PEligibilitySummary(
+            base_summary = EEESummary(
                 program_id=g2p_que_eligibility_request.program_id,
                 program_mnemonic=g2p_program_definition.program_mnemonic,
                 target_registry_type=g2p_program_definition.target_registry_type,
@@ -99,8 +99,8 @@ def eligibility_request_worker(id: int):
 
             try:
                 # Get the appropriate summary computation class
-                summary_computation_interface: SummaryComputationInterface = (
-                    EligibilitySummaryFactory.get_summary_computation_class(
+                summary_computation_interface: EEERegistryInterface = (
+                    EEERegistryFactory.get_summary_computation_class(
                         g2p_program_definition.target_registry_type
                     )
                 )

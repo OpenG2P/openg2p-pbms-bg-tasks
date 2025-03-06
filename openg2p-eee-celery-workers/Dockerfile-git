@@ -25,8 +25,7 @@ RUN python3 -m venv venv \
   git+https://github.com/openg2p/openg2p-fastapi-common@v1.1.1\#subdirectory=openg2p-fastapi-auth \
   git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-pbms-models \
   git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-eee-models \
-  git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-sr-models \
-  git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-eee-eligibility-summary \
+  git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-eee-registry-adapters \
   ./src
 
 USER ${container_user}

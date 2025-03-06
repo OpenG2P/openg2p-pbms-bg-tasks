@@ -1,6 +1,6 @@
 import logging
 
-from openg2p_pbms_models.models import EnumStatus, G2PQueEligibilityRequest
+from openg2p_pbms_models.models import EnumStatus, G2PQueEEERequest
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -21,11 +21,8 @@ def eligibility_request_beat_producer():
         # Fetch rows with PENDING status
         pending_eligibility_requests = (
             session.execute(
-                select(G2PQueEligibilityRequest)
-                .filter(
-                    G2PQueEligibilityRequest.enumeration_status
-                    == EnumStatus.PENDING.value
-                )
+                select(G2PQueEEERequest)
+                .filter(G2PQueEEERequest.enumeration_status == EnumStatus.PENDING.value)
                 .limit(_config.batch_size)
             )
             .scalars()
