@@ -6,11 +6,11 @@ from sqlalchemy.orm import Session
 from ..schema import G2PRegistry
 
 
-class SummaryComputationInterface(ABC):
+class EEERegistryInterface(ABC):
     """Interface for computing summary statistics"""
 
     @abstractmethod
-    def get_summary(self, request_id: int, eee_session: Session):
+    async def get_summary(self, request_id: int, eee_session: Session):
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary()")
 
@@ -18,6 +18,11 @@ class SummaryComputationInterface(ABC):
     def get_registrants(self, registrant_ids) -> List[G2PRegistry]:
         # Abstract method to fetch registrants from the database using session
         raise NotImplementedError("Subclasses must implement get_registrants()")
+
+    # @abstractmethod
+    # def get_registrants(self, registrant_ids) -> List[G2PRegistry]:
+    #     # Abstract method to fetch registrants from the database using session
+    #     raise NotImplementedError("Subclasses must implement get_registrants()")
 
     @abstractmethod
     def compute_and_persist_summary(

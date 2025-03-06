@@ -2,24 +2,49 @@ from datetime import date
 from typing import List
 
 import numpy as np
-from openg2p_eee_models.models import G2PEligibilitySummaryStudent
-from openg2p_sr_models.models import G2PStudentRegistry
+from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
-from ..interface import SummaryComputationInterface
+from openg2p_eee_registry_adapters.models import EligibilitySummaryStudent
+
+from ..interface import EEERegistryInterface
+from ..models import G2PStudentRegistry
+from ..schema import EligibilitySummaryStudentResponse
 
 
-class SummaryComputationStudent(SummaryComputationInterface):
+class EEERegistryStudent(EEERegistryInterface):
     """Fetches student data and computes summary statistics"""
 
-    def get_summary(
+    async def get_summary(
         self, request_id: int, eee_session: Session
-    ) -> G2PEligibilitySummaryStudent:
-        return (
-            eee_session.query(G2PEligibilitySummaryStudent)
-            .filter(G2PEligibilitySummaryStudent.eligibility_request_id == request_id)
+    ) -> EligibilitySummaryStudentResponse:
+        eligibility_summary_student = (
+            (
+                await eee_session.execute(
+                    select(EligibilitySummaryStudent).where(
+                        EligibilitySummaryStudent.eligibility_request_id == request_id
+                    )
+                )
+            )
+            .scalars()
             .first()
         )
+
+        summary = EligibilitySummaryStudentResponse(
+            id=eligibility_summary_student.id,
+            program_id=eligibility_summary_student.program_id,
+            program_mnemonic=eligibility_summary_student.program_mnemonic,
+            target_registry_type=eligibility_summary_student.target_registry_type,
+            eligibility_request_id=eligibility_summary_student.eligibility_request_id,
+            number_of_registrants=eligibility_summary_student.number_of_registrants,
+            date_created=eligibility_summary_student.date_created,
+            age_mean=eligibility_summary_student.age_mean,
+            age_quartile_25=eligibility_summary_student.age_quartile_25,
+            age_quartile_50=eligibility_summary_student.age_quartile_50,
+            age_quartile_75=eligibility_summary_student.age_quartile_75,
+        )
+
+        return summary
 
     def get_registrants(self, registrant_ids, sr_session) -> List[G2PStudentRegistry]:
         return (
@@ -38,7 +63,7 @@ class SummaryComputationStudent(SummaryComputationInterface):
             if student.date_of_birth
         ]
 
-        student_summary = G2PEligibilitySummaryStudent(
+        student_summary = EligibilitySummaryStudent(
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
             target_registry_type=base_summary.target_registry_type,

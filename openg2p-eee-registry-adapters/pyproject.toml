@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "openg2p-eee-eligibility-summary"
+name = "openg2p-eee-registry-adapters"
 authors = [
   { name="OpenG2P", email="info@openg2p.org" },
 ]
-description = "OpenG2P Eligibility Entitlement Engine Eligibility Summary"
+description = "OpenG2P Eligibility Entitlement Engine Registry Adapters"
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
@@ -29,4 +29,4 @@ Repository = "https://github.com/OpenG2P/openg2p-pbms-eligibility-entitlement-en
 Source = "https://github.com/OpenG2P/openg2p-pbms-eligibility-entitlement-engine"
 
 [tool.hatch.version]
-path = "src/openg2p_eee_eligibility_summary/__init__.py"
+path = "src/openg2p_eee_registry_adapters/__init__.py"
