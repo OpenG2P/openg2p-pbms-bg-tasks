@@ -11,8 +11,8 @@ class EnumStatus(enum.Enum):
     COMPLETE = "complete"
 
 
-class G2PQueEligibilityRequest(BaseORMModel):
-    __tablename__ = "g2p_que_eligibility_request"
+class G2PQueEEERequest(BaseORMModel):
+    __tablename__ = "g2p_que_eee_request"
 
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
     program_id = mapped_column(

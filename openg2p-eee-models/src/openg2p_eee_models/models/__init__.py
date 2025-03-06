@@ -1,4 +1,2 @@
-from .eligibility_details import G2PEligibilityDetails
-from .eligibility_summary import G2PEligibilitySummary
-from .eligibility_summary_farmer import G2PEligibilitySummaryFarmer
-from .eligibility_summary_student import G2PEligibilitySummaryStudent
+from .eee_details import EEEDetails
+from .eee_summary import EEESummary

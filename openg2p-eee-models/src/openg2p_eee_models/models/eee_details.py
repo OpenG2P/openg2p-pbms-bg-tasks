@@ -3,7 +3,7 @@ from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import mapped_column
 
 
-class G2PEligibilityDetails(BaseORMModel):
+class EEEDetails(BaseORMModel):
     __tablename__ = "g2p_eligibility_details"
 
     eligibility_list_id = mapped_column(
