@@ -6,7 +6,7 @@ from sqlalchemy.orm import mapped_column
 class EEEDetails(BaseORMModel):
     __tablename__ = "g2p_eligibility_details"
 
-    eligibility_list_id = mapped_column(
+    eee_request_id = mapped_column(
         Integer, ForeignKey("g2p_eligibility_list.id"), primary_key=True
     )
     registrant_id = mapped_column(

@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 from openg2p_g2pconnect_common_lib.schemas import (
     Request,
     SyncResponse,
@@ -6,11 +8,19 @@ from pydantic import BaseModel
 
 
 class EEEBeneficiarySearchRequestPayload(BaseModel):
-    registry_type: str
+    eee_request_id: int
+    target_registry_type: str
     page: int
     page_size: int
     search_query: str
     order_by: str
+
+
+class EEEBeneficiarySearchResponsePayload(BaseModel):
+    total_beneficiary_count: int
+    page: int
+    page_size: int
+    beneficiaries: Optional[List[object]] = None
 
 
 class EEEBeneficiarySearchRequest(Request):
@@ -18,4 +28,4 @@ class EEEBeneficiarySearchRequest(Request):
 
 
 class EEEBeneficiarySearchResponse(SyncResponse):
-    message: object
+    message: EEEBeneficiarySearchResponsePayload
