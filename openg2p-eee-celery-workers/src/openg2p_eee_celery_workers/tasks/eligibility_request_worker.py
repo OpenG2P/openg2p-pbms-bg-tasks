@@ -91,7 +91,7 @@ def eligibility_request_worker(id: int):
                 program_id=g2p_que_eligibility_request.program_id,
                 program_mnemonic=g2p_program_definition.program_mnemonic,
                 target_registry_type=g2p_program_definition.target_registry_type,
-                eligibility_request_id=id,
+                eee_request_id=id,
                 number_of_registrants=len(registrant_ids),
                 date_created=datetime.utcnow(),
             )
