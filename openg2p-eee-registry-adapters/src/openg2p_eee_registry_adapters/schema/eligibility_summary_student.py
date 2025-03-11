@@ -1,9 +1,9 @@
 from typing import Optional
 
-from .eligibility_summary import EligibilitySummaryResponse
+from .eligibility_summary import EligibilitySummaryPayload
 
 
-class EligibilitySummaryStudentResponse(EligibilitySummaryResponse):
+class EligibilitySummaryStudentPayload(EligibilitySummaryPayload):
     age_mean: Optional[float]
     age_quartile_25: Optional[float]
     age_quartile_50: Optional[float]

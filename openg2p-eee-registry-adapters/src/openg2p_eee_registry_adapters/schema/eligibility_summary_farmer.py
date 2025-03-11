@@ -1,17 +1,9 @@
-from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from .eligibility_summary import EligibilitySummaryPayload
 
 
-class EligibilitySummaryFarmerResponse(BaseModel):
-    id: int
-    program_id: int
-    program_mnemonic: str
-    target_registry_type: str
-    eligibility_request_id: int
-    number_of_registrants: int
-    date_created: Optional[datetime]
+class EligibilitySummaryFarmerPayload(EligibilitySummaryPayload):
     land_holding_mean: Optional[float]
     land_holding_quartile_25: Optional[float]
     land_holding_quartile_50: Optional[float]

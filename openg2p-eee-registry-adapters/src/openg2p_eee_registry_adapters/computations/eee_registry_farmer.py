@@ -1,25 +1,33 @@
 from typing import List
 
 import numpy as np
+from fastapi_cache.decorator import cache
+from openg2p_eee_models.models import EEEDetails
+from openg2p_eee_models.schemas import EEEBeneficiarySearchResponsePayload
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
+from ..cache import beneficiary_count_key_builder
 from ..interface import EEERegistryInterface
 from ..models import EligibilitySummaryFarmer, G2PFarmerRegistry
-from ..schema import EligibilitySummaryFarmerResponse
+from ..schema import EligibilitySummaryFarmerPayload, G2PFarmerRegistryPayload
 
 
 class EEERegistryFarmer(EEERegistryInterface):
     """Fetches farmer data and computes summary statistics"""
 
+    # ===================
+    # Summary API Methods
+    # ===================
     async def get_summary(
-        self, request_id: int, eee_session: Session
-    ) -> EligibilitySummaryFarmerResponse:
+        self, request_id: int, eee_session: AsyncSession
+    ) -> EligibilitySummaryFarmerPayload:
         eligibility_summary_farmer = (
             (
                 await eee_session.execute(
                     select(EligibilitySummaryFarmer).where(
-                        EligibilitySummaryFarmer.eligibility_request_id == request_id
+                        EligibilitySummaryFarmer.eee_request_id == request_id
                     )
                 )
             )
@@ -27,12 +35,12 @@ class EEERegistryFarmer(EEERegistryInterface):
             .first()
         )
 
-        summary = EligibilitySummaryFarmerResponse(
+        summary = EligibilitySummaryFarmerPayload(
             id=eligibility_summary_farmer.id,
             program_id=eligibility_summary_farmer.program_id,
             program_mnemonic=eligibility_summary_farmer.program_mnemonic,
             target_registry_type=eligibility_summary_farmer.target_registry_type,
-            eligibility_request_id=eligibility_summary_farmer.eligibility_request_id,
+            eee_request_id=eligibility_summary_farmer.eee_request_id,
             number_of_registrants=eligibility_summary_farmer.number_of_registrants,
             date_created=eligibility_summary_farmer.date_created,
             land_holding_mean=eligibility_summary_farmer.land_holding_mean,
@@ -47,13 +55,95 @@ class EEERegistryFarmer(EEERegistryInterface):
 
         return summary
 
-    def get_registrants(self, registrant_ids, sr_session) -> List[G2PFarmerRegistry]:
-        return (
-            sr_session.query(G2PFarmerRegistry)
-            .filter(G2PFarmerRegistry.id.in_(registrant_ids))
+    # ==============================
+    # Beneficiary Search API Methods
+    # ==============================
+    async def search_beneficiaries(
+        self,
+        eee_session: AsyncSession,
+        sr_session: AsyncSession,
+        eee_request_id: int,
+        target_registry_type: str,
+        search_query,
+        page=1,
+        page_size=10,
+        order_by="id asc",
+    ) -> EEEBeneficiarySearchResponsePayload:
+        registrant_ids = await eee_session.execute(
+            select(EEEDetails.registrant_id).where(
+                EEEDetails.eee_request_id == eee_request_id
+            )
+        )
+        registrant_ids: List[int] = registrant_ids.scalars().all()
+
+        (
+            farmer_search_query,
+            farmer_search_params,
+        ) = self.construct_beneficiary_search_sql_query(
+            registrant_ids,
+            target_registry_type,
+            search_query,
+            order_by,
+            page_size,
+            page,
+        )
+        farmer_search_results = (
+            (await sr_session.execute(farmer_search_query, farmer_search_params))
+            .mappings()
             .all()
         )
 
+        total_beneficiary_count: int = await self._get_total_beneficiary_count(
+            sr_session, eee_request_id, registrant_ids, search_query
+        )
+
+        beneficiaries = []
+        if farmer_search_results:
+            beneficiaries = [
+                G2PFarmerRegistryPayload(
+                    id=farmer["id"],
+                    unique_id=farmer["unique_id"],
+                    registration_date=farmer["registration_date"],
+                    name=farmer["name"],
+                    land_area=farmer["land_area"],
+                    no_of_cattle_heads=farmer["no_of_cattle_heads"],
+                    no_of_poultry_heads=farmer["no_of_poultry_heads"],
+                )
+                for farmer in farmer_search_results
+            ]
+
+        response_payload = EEEBeneficiarySearchResponsePayload(
+            total_beneficiary_count=total_beneficiary_count,
+            page=page,
+            page_size=page_size,
+            beneficiaries=beneficiaries,
+        )
+
+        return response_payload
+
+    @cache(expire=120, key_builder=beneficiary_count_key_builder)
+    async def _get_total_beneficiary_count(
+        self,
+        sr_session: AsyncSession,
+        eee_request_id: int,
+        registrant_ids: List[int],
+        search_query: str,
+    ) -> int:
+        (
+            beneficiary_count_query,
+            beneficiary_count_params,
+        ) = self.construct_beneficiary_search_count_sql_query(
+            registrant_ids, "farmer", search_query
+        )
+        total_beneficiary_count = (
+            await sr_session.execute(beneficiary_count_query, beneficiary_count_params)
+        ).scalar_one()
+
+        return total_beneficiary_count
+
+    # =====================
+    # Celery Worker Methods
+    # =====================
     def compute_and_persist_summary(
         self, registrant_ids, base_summary, sr_session: Session, eee_session: Session
     ):
@@ -66,7 +156,7 @@ class EEERegistryFarmer(EEERegistryInterface):
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
             target_registry_type=base_summary.target_registry_type,
-            eligibility_request_id=base_summary.eligibility_request_id,
+            eee_request_id=base_summary.eee_request_id,
             number_of_registrants=base_summary.number_of_registrants,
             date_created=base_summary.date_created,
         )
@@ -85,3 +175,10 @@ class EEERegistryFarmer(EEERegistryInterface):
             )
 
         eee_session.add(farmer_summary)
+
+    def get_registrants(self, registrant_ids, sr_session) -> List[G2PFarmerRegistry]:
+        return (
+            sr_session.query(G2PFarmerRegistry)
+            .filter(G2PFarmerRegistry.id.in_(registrant_ids))
+            .all()
+        )
