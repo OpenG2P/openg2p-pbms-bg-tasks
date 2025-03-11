@@ -16,6 +16,6 @@ class EEESummary(BaseORMModel):
     target_registry_type = mapped_column(String, nullable=False)
     eee_request_id = mapped_column(
         Integer, ForeignKey("g2p_que_eee_request.id"), nullable=False
-    )  # TODO: eee_request_id
+    )
     number_of_registrants = mapped_column(Integer, nullable=False)
     date_created = mapped_column(DateTime, default=datetime.utcnow(), nullable=False)

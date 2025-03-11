@@ -11,7 +11,10 @@ from ..schema import EligibilitySummaryPayload
 
 
 class EEERegistryInterface(ABC):
-    """Interface for computing summary statistics"""
+    """
+    Base class for EEE Registry Interface
+    Defines methods for interacting with the EEE registry classes
+    """
 
     @abstractmethod
     async def get_summary(
@@ -47,8 +50,9 @@ class EEERegistryInterface(ABC):
         # Abstract method to compute summary statistics
         raise NotImplementedError("Subclasses must implement compute_summary()")
 
-    # ===== SQL QUERY CONSTRUCTORS =====
-
+    # ======================
+    # SQL Query Constructors
+    # ======================
     def construct_beneficiary_search_sql_query(
         self,
         registrant_ids: List[int],

@@ -1,6 +1,3 @@
-# from datetime import datetime
-
-# from openg2p_fastapi_common.models import BaseORMModel
 from openg2p_pbms_models.models import G2PRegistry
 from sqlalchemy import Float, Integer, String
 from sqlalchemy.orm import mapped_column

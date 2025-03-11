@@ -18,7 +18,6 @@ class Settings(BaseSettings):
         """
     openapi_version: str = __version__
 
-    # db_datasource: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/db"
     db_datasource_eee: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:5432/eeedb"
     )
