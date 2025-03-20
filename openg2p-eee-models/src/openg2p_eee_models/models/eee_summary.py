@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from openg2p_fastapi_common.models import BaseORMModel
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import mapped_column
 
 
@@ -14,8 +14,13 @@ class EEESummary(BaseORMModel):
     )
     program_mnemonic = mapped_column(String, nullable=False)
     target_registry_type = mapped_column(String, nullable=False)
-    eee_request_id = mapped_column(
-        Integer, ForeignKey("g2p_que_eee_request.id"), nullable=False
-    )
+    pbms_request_id = mapped_column(String, index=True, unique=True, nullable=False)
     number_of_registrants = mapped_column(Integer, nullable=False)
+
+    total_entitlement_amount = mapped_column(Float, nullable=True)
+    average_entitlement_per_person = mapped_column(Float, nullable=True)
+    entitlement_amount_q1 = mapped_column(Float, nullable=True)
+    entitlement_amount_q2 = mapped_column(Float, nullable=True)
+    entitlement_amount_q3 = mapped_column(Float, nullable=True)
+
     date_created = mapped_column(DateTime, default=datetime.utcnow(), nullable=False)

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 
 class EEEBeneficiarySearchRequestPayload(BaseModel):
-    eee_request_id: int
+    pbms_request_id: str
     target_registry_type: str
     page: int
     page_size: int
