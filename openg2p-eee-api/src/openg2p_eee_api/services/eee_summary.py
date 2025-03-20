@@ -35,13 +35,13 @@ class EEESummaryService(BaseService):
         async with session_maker() as session:
             try:
                 summary_computation_interface: EEERegistryInterface = (
-                    EEERegistryFactory.get_summary_computation_class(
+                    EEERegistryFactory.get_computation_class(
                         eee_summary_request_payload.target_registry_type
                     )
                 )
                 eee_summary: EEESummary = (
                     await summary_computation_interface.get_summary(
-                        int(eee_summary_request_payload.id), session
+                        eee_summary_request_payload.pbms_request_id, session
                     )
                 )
                 return eee_summary

@@ -44,6 +44,9 @@ class EEEBeneficiarySearchController(BaseController):
                 eee_beneficiary_search_request, eee_beneficiary_search_response_payload
             )
             _logger.info("Beneficiaries retrieved successfully")
+            _logger.info(
+                "Beneficiary Search Response: %s", eee_beneficiary_search_response
+            )
             return eee_beneficiary_search_response
 
         except EEEException as e:

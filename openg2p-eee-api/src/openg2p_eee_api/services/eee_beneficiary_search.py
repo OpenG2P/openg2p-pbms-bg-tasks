@@ -38,14 +38,14 @@ class EEEBeneficiarySearchService(BaseService):
         async with eee_session_maker() as eee_session, sr_session_maker() as sr_session:
             try:
                 eee_registry_interface: EEERegistryInterface = (
-                    EEERegistryFactory.get_summary_computation_class(
+                    EEERegistryFactory.get_computation_class(
                         eee_beneficiary_search_request_payload.target_registry_type
                     )
                 )
                 eee_beneficiary_search_response_payload: EEEBeneficiarySearchResponsePayload = await eee_registry_interface.search_beneficiaries(
                     eee_session,
                     sr_session,
-                    eee_beneficiary_search_request_payload.eee_request_id,
+                    eee_beneficiary_search_request_payload.pbms_request_id,
                     eee_beneficiary_search_request_payload.target_registry_type,
                     eee_beneficiary_search_request_payload.search_query,
                     eee_beneficiary_search_request_payload.page,
