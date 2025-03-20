@@ -1,16 +1,13 @@
-import json
-
-from sqlalchemy import text
+from sqlalchemy import TextClause, text
 
 
-def construct_intersect_query(sql_query_json):
-    """Convert stored JSON SQL queries into a single SQL query using INTERSECT."""
+def construct_intersect_query(sql_queries: list) -> TextClause:
+    """Convert list of SQL queries into a single SQL query using INTERSECT"""
     try:
-        queries = json.loads(sql_query_json)
-        if not queries or not isinstance(queries, list):
+        if not sql_queries or not isinstance(sql_queries, list):
             return None
 
-        intersect_query = " INTERSECT ".join(queries)
+        intersect_query = " INTERSECT ".join(sql_queries)
         return text(intersect_query)
-    except json.JSONDecodeError:
+    except Exception as _:
         return None

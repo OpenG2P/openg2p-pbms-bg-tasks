@@ -1,2 +1,2 @@
-from .g2p_eligibility_details_helper import persist_g2p_eligibility_details
+from .eee_details_helper import persist_eee_details
 from .query_helper import construct_intersect_query
