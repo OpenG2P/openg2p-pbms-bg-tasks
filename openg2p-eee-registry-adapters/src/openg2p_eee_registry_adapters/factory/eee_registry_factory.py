@@ -12,7 +12,7 @@ class EEERegistryFactory:
     """Get the appropriate summary computation class based on the registrant type"""
 
     @staticmethod
-    def get_summary_computation_class(
+    def get_computation_class(
         target_registry_type,
     ) -> EEERegistryInterface:
         if target_registry_type == G2PRegistryType.FARMER.value:

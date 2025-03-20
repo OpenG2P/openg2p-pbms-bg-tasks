@@ -4,14 +4,20 @@ import numpy as np
 from fastapi_cache.decorator import cache
 from openg2p_eee_models.models import EEEDetails
 from openg2p_eee_models.schemas import EEEBeneficiarySearchResponsePayload
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
 from ..cache import beneficiary_count_key_builder
 from ..interface import EEERegistryInterface
-from ..models import EligibilitySummaryFarmer, G2PFarmerRegistry
-from ..schema import EligibilitySummaryFarmerPayload, G2PFarmerRegistryPayload
+from ..models import EEESummaryFarmer, G2PFarmerRegistry
+from ..schema import (
+    EEESummaryFarmerPayload,
+    EligibilitySummaryFarmerPayload,
+    EntitlementSummaryFarmerPayload,
+    G2PFarmerRegistryPayload,
+)
 
 
 class EEERegistryFarmer(EEERegistryInterface):
@@ -21,13 +27,13 @@ class EEERegistryFarmer(EEERegistryInterface):
     # Summary API Methods
     # ===================
     async def get_summary(
-        self, request_id: int, eee_session: AsyncSession
-    ) -> EligibilitySummaryFarmerPayload:
+        self, pbms_request_id: str, eee_session: AsyncSession
+    ) -> EEESummaryFarmerPayload:
         eligibility_summary_farmer = (
             (
                 await eee_session.execute(
-                    select(EligibilitySummaryFarmer).where(
-                        EligibilitySummaryFarmer.eee_request_id == request_id
+                    select(EEESummaryFarmer).where(
+                        EEESummaryFarmer.pbms_request_id == pbms_request_id
                     )
                 )
             )
@@ -35,22 +41,39 @@ class EEERegistryFarmer(EEERegistryInterface):
             .first()
         )
 
-        summary = EligibilitySummaryFarmerPayload(
+        summary = EEESummaryFarmerPayload(
             id=eligibility_summary_farmer.id,
             program_id=eligibility_summary_farmer.program_id,
             program_mnemonic=eligibility_summary_farmer.program_mnemonic,
             target_registry_type=eligibility_summary_farmer.target_registry_type,
-            eee_request_id=eligibility_summary_farmer.eee_request_id,
+            pbms_request_id=eligibility_summary_farmer.pbms_request_id,
             number_of_registrants=eligibility_summary_farmer.number_of_registrants,
             date_created=eligibility_summary_farmer.date_created,
-            land_holding_mean=eligibility_summary_farmer.land_holding_mean,
-            land_holding_quartile_25=eligibility_summary_farmer.land_holding_quartile_25,
-            land_holding_quartile_50=eligibility_summary_farmer.land_holding_quartile_50,
-            land_holding_quartile_75=eligibility_summary_farmer.land_holding_quartile_75,
-            annual_income_mean=eligibility_summary_farmer.annual_income_mean,
-            annual_income_quartile_25=eligibility_summary_farmer.annual_income_quartile_25,
-            annual_income_quartile_50=eligibility_summary_farmer.annual_income_quartile_50,
-            annual_income_quartile_75=eligibility_summary_farmer.annual_income_quartile_75,
+            eligibility_summary=EligibilitySummaryFarmerPayload(
+                land_holding_mean=eligibility_summary_farmer.land_holding_mean,
+                land_holding_quartile_25=eligibility_summary_farmer.land_holding_quartile_25,
+                land_holding_quartile_50=eligibility_summary_farmer.land_holding_quartile_50,
+                land_holding_quartile_75=eligibility_summary_farmer.land_holding_quartile_75,
+                annual_income_mean=eligibility_summary_farmer.annual_income_mean,
+                annual_income_quartile_25=eligibility_summary_farmer.annual_income_quartile_25,
+                annual_income_quartile_50=eligibility_summary_farmer.annual_income_quartile_50,
+                annual_income_quartile_75=eligibility_summary_farmer.annual_income_quartile_75,
+            ),
+            entitlement_summary=EntitlementSummaryFarmerPayload(
+                total_entitlement_amount=eligibility_summary_farmer.total_entitlement_amount,
+                average_entitlement_per_person=eligibility_summary_farmer.average_entitlement_per_person,
+                average_entitlement_female=eligibility_summary_farmer.average_entitlement_female,
+                average_entitlement_male=eligibility_summary_farmer.average_entitlement_male,
+                entitlement_amount_q1=eligibility_summary_farmer.entitlement_amount_q1,
+                entitlement_amount_q2=eligibility_summary_farmer.entitlement_amount_q2,
+                entitlement_amount_q3=eligibility_summary_farmer.entitlement_amount_q3,
+                entitlement_amount_male_q1=eligibility_summary_farmer.entitlement_amount_male_q1,
+                entitlement_amount_male_q2=eligibility_summary_farmer.entitlement_amount_male_q2,
+                entitlement_amount_male_q3=eligibility_summary_farmer.entitlement_amount_male_q3,
+                entitlement_amount_female_q1=eligibility_summary_farmer.entitlement_amount_female_q1,
+                entitlement_amount_female_q2=eligibility_summary_farmer.entitlement_amount_female_q2,
+                entitlement_amount_female_q3=eligibility_summary_farmer.entitlement_amount_female_q3,
+            ),
         )
 
         return summary
@@ -62,7 +85,7 @@ class EEERegistryFarmer(EEERegistryInterface):
         self,
         eee_session: AsyncSession,
         sr_session: AsyncSession,
-        eee_request_id: int,
+        pbms_request_id: str,
         target_registry_type: str,
         search_query,
         page=1,
@@ -71,7 +94,7 @@ class EEERegistryFarmer(EEERegistryInterface):
     ) -> EEEBeneficiarySearchResponsePayload:
         registrant_ids = await eee_session.execute(
             select(EEEDetails.registrant_id).where(
-                EEEDetails.eee_request_id == eee_request_id
+                EEEDetails.pbms_request_id == pbms_request_id
             )
         )
         registrant_ids: List[int] = registrant_ids.scalars().all()
@@ -94,7 +117,7 @@ class EEERegistryFarmer(EEERegistryInterface):
         )
 
         total_beneficiary_count: int = await self._get_total_beneficiary_count(
-            sr_session, eee_request_id, registrant_ids, search_query
+            sr_session, pbms_request_id, registrant_ids, search_query
         )
 
         beneficiaries = []
@@ -125,7 +148,7 @@ class EEERegistryFarmer(EEERegistryInterface):
     async def _get_total_beneficiary_count(
         self,
         sr_session: AsyncSession,
-        eee_request_id: int,
+        pbms_request_id: str,
         registrant_ids: List[int],
         search_query: str,
     ) -> int:
@@ -141,9 +164,9 @@ class EEERegistryFarmer(EEERegistryInterface):
 
         return total_beneficiary_count
 
-    # =====================
-    # Celery Worker Methods
-    # =====================
+    # =================================
+    # Eligibility Celery Worker Methods
+    # =================================
     def compute_and_persist_summary(
         self, registrant_ids, base_summary, sr_session: Session, eee_session: Session
     ):
@@ -152,11 +175,11 @@ class EEERegistryFarmer(EEERegistryInterface):
             farmer.land_area for farmer in registrants if farmer.land_area is not None
         ]
 
-        farmer_summary = EligibilitySummaryFarmer(
+        farmer_summary = EEESummaryFarmer(
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
             target_registry_type=base_summary.target_registry_type,
-            eee_request_id=base_summary.eee_request_id,
+            pbms_request_id=base_summary.pbms_request_id,
             number_of_registrants=base_summary.number_of_registrants,
             date_created=base_summary.date_created,
         )
@@ -181,4 +204,53 @@ class EEERegistryFarmer(EEERegistryInterface):
             sr_session.query(G2PFarmerRegistry)
             .filter(G2PFarmerRegistry.id.in_(registrant_ids))
             .all()
+        )
+
+    # =================================
+    # Entitlement Celery Worker Methods
+    # =================================
+    def get_is_registant_entitled(
+        self, registrant_id: int, sql_query: str, sr_session: Session
+    ) -> bool:
+        sql_query_with_registrant_id = (
+            self.construct_get_is_registrant_entitled_sql_query(
+                registrant_id, "farmer", sql_query
+            )
+        )
+
+        result = sr_session.execute(sql_query_with_registrant_id).fetchone()
+        return result is not None
+
+    def compute_entitlements_and_modify_summary(
+        self, entitlements: List[float], pbms_request_id: str, eee_session: Session
+    ):
+        if not entitlements:
+            return
+
+        entitlement_values = np.array(entitlements)
+
+        # Compute summary statistics
+        total_entitlement_amount = float(np.sum(entitlement_values))
+        average_entitlement_per_person = float(np.mean(entitlement_values))
+        entitlement_amount_q1 = float(
+            np.percentile(entitlement_values, 25, method="midpoint")
+        )
+        entitlement_amount_q2 = float(
+            np.percentile(entitlement_values, 50, method="midpoint")
+        )
+        entitlement_amount_q3 = float(
+            np.percentile(entitlement_values, 75, method="midpoint")
+        )
+
+        # Update g2p_eligibility_summary_farmer record
+        eee_session.execute(
+            update(EEESummaryFarmer)
+            .where(EEESummaryFarmer.pbms_request_id == pbms_request_id)
+            .values(
+                total_entitlement_amount=total_entitlement_amount,
+                average_entitlement_per_person=average_entitlement_per_person,
+                entitlement_amount_q1=entitlement_amount_q1,
+                entitlement_amount_q2=entitlement_amount_q2,
+                entitlement_amount_q3=entitlement_amount_q3,
+            )
         )

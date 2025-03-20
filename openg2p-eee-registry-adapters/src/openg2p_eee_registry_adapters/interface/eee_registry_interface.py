@@ -7,7 +7,7 @@ from sqlalchemy import TextClause, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from ..schema import EligibilitySummaryPayload
+from ..schema import EEESummaryPayload
 
 
 class EEERegistryInterface(ABC):
@@ -18,8 +18,8 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     async def get_summary(
-        self, request_id: int, eee_session: Session
-    ) -> EligibilitySummaryPayload:
+        self, pbms_request_id: str, eee_session: Session
+    ) -> EEESummaryPayload:
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary()")
 
@@ -29,11 +29,29 @@ class EEERegistryInterface(ABC):
         raise NotImplementedError("Subclasses must implement get_registrants()")
 
     @abstractmethod
+    def get_is_registant_entitled(
+        self, registrant_id: int, sql_query: str, sr_session: Session
+    ) -> bool:
+        # Abstract method to check if registrant is entitled
+        raise NotImplementedError(
+            "Subclasses must implement get_is_registant_entitled()"
+        )
+
+    @abstractmethod
+    def compute_entitlements_and_modify_summary(
+        self, entitlements: List[float], pbms_request_id: str, eee_session: Session
+    ):
+        # Abstract method to compute entitlements fields and modify summary
+        raise NotImplementedError(
+            "Subclasses must implement compute_entitlements_and_modify_summary()"
+        )
+
+    @abstractmethod
     async def search_beneficiaries(
         self,
         eee_session: AsyncSession,
         pbms_session: AsyncSession,
-        eee_request_id: int,
+        pbms_request_id: str,
         target_registry_type: str,
         search_query: str,
         page: int,
@@ -53,6 +71,7 @@ class EEERegistryInterface(ABC):
     # ======================
     # SQL Query Constructors
     # ======================
+    # TODO: Implement batching in beneficiary search query builders
     def construct_beneficiary_search_sql_query(
         self,
         registrant_ids: List[int],
@@ -120,3 +139,24 @@ class EEERegistryInterface(ABC):
         }
 
         return sql_query, params
+
+    def construct_get_is_registrant_entitled_sql_query(
+        self, registrant_id: int, target_registry_type: str, sql_query: str
+    ) -> TextClause:
+        sql_query = sql_query.strip()
+
+        if not registrant_id:
+            raise ValueError("registrant_id cannot be None or zero")
+        if not sql_query.upper().startswith("SELECT"):
+            raise ValueError("Invalid SQL query: Must be a valid SELECT statement")
+
+        if "WHERE" in sql_query.upper():
+            sql_query += f" AND g2p_{target_registry_type}_registry.id = :registrant_id"
+        else:
+            sql_query += (
+                f" WHERE g2p_{target_registry_type}_registry.id = :registrant_id"
+            )
+
+        params = {"registrant_id": registrant_id}
+
+        return text(sql_query).params(**params)
