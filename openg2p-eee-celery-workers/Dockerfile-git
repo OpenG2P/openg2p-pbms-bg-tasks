@@ -33,4 +33,4 @@ USER ${container_user}
 
 ENV EEE_CELERY_WORKERS_COUNT=4
 
-CMD celery -A main.celery_app worker -Q eligibility_request_queue --loglevel=info --concurrency=${EEE_CELERY_WORKERS_COUNT}
+CMD celery -A main.celery_app worker -Q eee_request_queue --loglevel=info --concurrency=${EEE_CELERY_WORKERS_COUNT}
