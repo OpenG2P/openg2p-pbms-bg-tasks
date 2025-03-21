@@ -20,14 +20,17 @@ ADD --chown=${container_user}:${container_user_group} main.py /app
 
 RUN python3 -m venv venv \
   && . ./venv/bin/activate
-  RUN python3 -m pip install  \
+RUN python3 -m pip install  \
   git+https://github.com/openg2p/openg2p-fastapi-common@v1.1.1\#subdirectory=openg2p-fastapi-common \
   git+https://github.com/openg2p/openg2p-fastapi-common@v1.1.1\#subdirectory=openg2p-fastapi-auth \
+  git+https://github.com/openg2p/openg2p-g2pconnect-common@1.1.0\#subdirectory=openg2p-g2pconnect-common-lib \
   git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-pbms-models \
   git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-eee-models \
-  git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-eee-registry-adapters \
+  git+https://github.com/openg2p/openg2p-pbms-eligibility-entitlement-engine@v1.0\#subdirectory=openg2p-registry-adapters \
   ./src
 
 USER ${container_user}
 
-CMD celery -A main.celery_app worker -Q eligibility_request_queue --loglevel=info
+ENV EEE_CELERY_WORKERS_COUNT=4
+
+CMD celery -A main.celery_app worker -Q eligibility_request_queue --loglevel=info --concurrency=${EEE_CELERY_WORKERS_COUNT}
