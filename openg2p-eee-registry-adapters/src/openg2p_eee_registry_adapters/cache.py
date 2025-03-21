@@ -11,7 +11,8 @@ def beneficiary_count_key_builder(func, namespace: str, *args, **kwargs):
     """
     Build a custom cache key with `pbms_request_id` and `search_query`.
     """
-    pbms_request_id = kwargs.get("pbms_request_id", "none")
-    search_query = kwargs.get("search_query", "")
+    args: list = kwargs.get("args")
+    pbms_request_id: str = args[2]
+    search_query: str = args[4]
 
-    return f"{namespace}:{pbms_request_id}:{search_query}"
+    return f"{namespace}{pbms_request_id}{search_query}"

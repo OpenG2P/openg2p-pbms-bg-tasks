@@ -99,6 +99,7 @@ class EEERegistryFarmer(EEERegistryInterface):
         )
         registrant_ids: List[int] = registrant_ids.scalars().all()
 
+        # TODO: Implement batching in beneficiary search
         (
             farmer_search_query,
             farmer_search_params,
@@ -152,6 +153,7 @@ class EEERegistryFarmer(EEERegistryInterface):
         registrant_ids: List[int],
         search_query: str,
     ) -> int:
+        print("")
         (
             beneficiary_count_query,
             beneficiary_count_params,

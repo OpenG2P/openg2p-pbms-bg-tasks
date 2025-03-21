@@ -96,6 +96,7 @@ class EEERegistryStudent(EEERegistryInterface):
         )
         registrant_ids = registrant_ids.scalars().all()
 
+        # TODO: Implement batching in beneficiary search
         (
             student_search_query,
             student_search_params,
