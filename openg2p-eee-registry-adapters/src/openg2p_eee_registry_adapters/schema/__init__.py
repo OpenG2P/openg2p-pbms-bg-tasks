@@ -1,12 +1,10 @@
-from .eee_summary import EEESummaryPayload
+from .eee_summary import EEEGeneralSummary, EEESummaryPayload
 from .eee_summary_farmer import (
     EEESummaryFarmerPayload,
-    EligibilitySummaryFarmerPayload,
-    EntitlementSummaryFarmerPayload,
+    RegistrySummaryFarmerPayload,
 )
 from .eee_summary_student import (
     EEESummaryStudentPayload,
-    EligibilitySummaryStudentPayload,
     EntitlementSummaryStudentPayload,
 )
 from .registry import G2PRegistryPayload

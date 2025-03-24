@@ -15,7 +15,6 @@ from ..interface import EEERegistryInterface
 from ..models import EEESummaryStudent, G2PStudentRegistry
 from ..schema import (
     EEESummaryStudentPayload,
-    EligibilitySummaryStudentPayload,
     EntitlementSummaryStudentPayload,
     G2PStudentRegistryPayload,
 )
@@ -43,22 +42,22 @@ class EEERegistryStudent(EEERegistryInterface):
         )
 
         summary = EEESummaryStudentPayload(
-            id=eligibility_summary_student.id,
-            program_id=eligibility_summary_student.program_id,
-            program_mnemonic=eligibility_summary_student.program_mnemonic,
-            target_registry_type=eligibility_summary_student.target_registry_type,
-            pbms_request_id=eligibility_summary_student.pbms_request_id,
-            number_of_registrants=eligibility_summary_student.number_of_registrants,
-            date_created=eligibility_summary_student.date_created,
-            eligibility_summary=EligibilitySummaryStudentPayload(
+            general_summary=EligibilitySummaryStudentPayload(
+                id=eligibility_summary_student.id,
+                program_id=eligibility_summary_student.program_id,
+                program_mnemonic=eligibility_summary_student.program_mnemonic,
+                target_registry_type=eligibility_summary_student.target_registry_type,
+                pbms_request_id=eligibility_summary_student.pbms_request_id,
+                number_of_registrants=eligibility_summary_student.number_of_registrants,
+                date_created=eligibility_summary_student.date_created,
+                total_entitlement_amount=eligibility_summary_student.total_entitlement_amount,
+                average_entitlement_per_registrant=eligibility_summary_student.average_entitlement_per_person,
+            ),
+            registry_summary=EntitlementSummaryStudentPayload(
                 age_mean=eligibility_summary_student.age_mean,
                 age_quartile_25=eligibility_summary_student.age_quartile_25,
                 age_quartile_50=eligibility_summary_student.age_quartile_50,
                 age_quartile_75=eligibility_summary_student.age_quartile_75,
-            ),
-            entitlement_summary=EntitlementSummaryStudentPayload(
-                total_entitlement_amount=eligibility_summary_student.total_entitlement_amount,
-                average_entitlement_per_person=eligibility_summary_student.average_entitlement_per_person,
                 average_entitlement_female=eligibility_summary_student.average_entitlement_female,
                 average_entitlement_male=eligibility_summary_student.average_entitlement_male,
                 entitlement_amount_q1=eligibility_summary_student.entitlement_amount_q1,

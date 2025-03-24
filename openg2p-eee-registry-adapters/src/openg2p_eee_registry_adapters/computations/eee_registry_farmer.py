@@ -13,10 +13,10 @@ from ..cache import beneficiary_count_key_builder
 from ..interface import EEERegistryInterface
 from ..models import EEESummaryFarmer, G2PFarmerRegistry
 from ..schema import (
+    EEEGeneralSummary,
     EEESummaryFarmerPayload,
-    EligibilitySummaryFarmerPayload,
-    EntitlementSummaryFarmerPayload,
     G2PFarmerRegistryPayload,
+    RegistrySummaryFarmerPayload,
 )
 
 
@@ -42,14 +42,18 @@ class EEERegistryFarmer(EEERegistryInterface):
         )
 
         summary = EEESummaryFarmerPayload(
-            id=eligibility_summary_farmer.id,
-            program_id=eligibility_summary_farmer.program_id,
-            program_mnemonic=eligibility_summary_farmer.program_mnemonic,
-            target_registry_type=eligibility_summary_farmer.target_registry_type,
-            pbms_request_id=eligibility_summary_farmer.pbms_request_id,
-            number_of_registrants=eligibility_summary_farmer.number_of_registrants,
-            date_created=eligibility_summary_farmer.date_created,
-            eligibility_summary=EligibilitySummaryFarmerPayload(
+            general_summary=EEEGeneralSummary(
+                id=eligibility_summary_farmer.id,
+                program_id=eligibility_summary_farmer.program_id,
+                program_mnemonic=eligibility_summary_farmer.program_mnemonic,
+                target_registry_type=eligibility_summary_farmer.target_registry_type,
+                pbms_request_id=eligibility_summary_farmer.pbms_request_id,
+                number_of_registrants=eligibility_summary_farmer.number_of_registrants,
+                date_created=eligibility_summary_farmer.date_created,
+                total_entitlement_amount=eligibility_summary_farmer.total_entitlement_amount,
+                average_entitlement_per_registrant=eligibility_summary_farmer.average_entitlement_per_person,
+            ),
+            registry_summary=RegistrySummaryFarmerPayload(
                 land_holding_mean=eligibility_summary_farmer.land_holding_mean,
                 land_holding_quartile_25=eligibility_summary_farmer.land_holding_quartile_25,
                 land_holding_quartile_50=eligibility_summary_farmer.land_holding_quartile_50,
@@ -58,10 +62,6 @@ class EEERegistryFarmer(EEERegistryInterface):
                 annual_income_quartile_25=eligibility_summary_farmer.annual_income_quartile_25,
                 annual_income_quartile_50=eligibility_summary_farmer.annual_income_quartile_50,
                 annual_income_quartile_75=eligibility_summary_farmer.annual_income_quartile_75,
-            ),
-            entitlement_summary=EntitlementSummaryFarmerPayload(
-                total_entitlement_amount=eligibility_summary_farmer.total_entitlement_amount,
-                average_entitlement_per_person=eligibility_summary_farmer.average_entitlement_per_person,
                 average_entitlement_female=eligibility_summary_farmer.average_entitlement_female,
                 average_entitlement_male=eligibility_summary_farmer.average_entitlement_male,
                 entitlement_amount_q1=eligibility_summary_farmer.entitlement_amount_q1,
