@@ -11,5 +11,5 @@ class G2PRegistry(BaseORMModel):
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
     unique_id = mapped_column(String, nullable=True)
     registration_date = mapped_column(
-        DateTime, default=datetime.utcnow(), nullable=False
+        DateTime, default=datetime.now(datetime.timezone.utc), nullable=False
     )

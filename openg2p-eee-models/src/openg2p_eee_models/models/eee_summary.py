@@ -23,4 +23,6 @@ class EEESummary(BaseORMModel):
     entitlement_amount_q2 = mapped_column(Float, nullable=True)
     entitlement_amount_q3 = mapped_column(Float, nullable=True)
 
-    date_created = mapped_column(DateTime, default=datetime.utcnow(), nullable=False)
+    date_created = mapped_column(
+        DateTime, default=datetime.now(datetime.timezone.utc), nullable=False
+    )

@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from openg2p_pbms_models.models import EnumStatus, G2PQueEEERequest
+from openg2p_pbms_models.models import G2PQueEEERequest, StatusEnum
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -26,11 +26,11 @@ def eee_request_beat_producer():
                 .filter(
                     (
                         G2PQueEEERequest.eligibility_process_status
-                        == EnumStatus.PENDING.value
+                        == StatusEnum.PENDING.value
                     )
                     | (
                         G2PQueEEERequest.entitlement_process_status
-                        == EnumStatus.PENDING.value
+                        == StatusEnum.PENDING.value
                     )
                 )
                 .limit(_config.batch_size)
@@ -43,13 +43,13 @@ def eee_request_beat_producer():
         for que_eee_request in que_eee_requests:
             _logger.info(f"Queueing EEE request ID: {que_eee_request.id}")
 
-            if que_eee_request.eligibility_process_status == EnumStatus.PENDING.value:
+            if que_eee_request.eligibility_process_status == StatusEnum.PENDING.value:
                 worker_type = "eligibility_request_worker"
-                que_eee_request.eligibility_process_status = EnumStatus.PROCESSING.value
+                que_eee_request.eligibility_process_status = StatusEnum.PROCESSING.value
 
-            elif que_eee_request.entitlement_process_status == EnumStatus.PENDING.value:
+            elif que_eee_request.entitlement_process_status == StatusEnum.PENDING.value:
                 worker_type = "entitlement_request_worker"
-                que_eee_request.entitlement_process_status = EnumStatus.PROCESSING.value
+                que_eee_request.entitlement_process_status = StatusEnum.PROCESSING.value
 
             _logger.info(
                 f"Updating status for {worker_type} to PROCESSING in EEE request ID: {que_eee_request.id}"

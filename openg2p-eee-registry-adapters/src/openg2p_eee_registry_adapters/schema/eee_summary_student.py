@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from .eee_summary import EEESummaryPayload
 
 
-class EntitlementSummaryStudentPayload(BaseModel):
+class RegistrySummaryStudentPayload(BaseModel):
     age_mean: Optional[float]
     age_quartile_25: Optional[float]
     age_quartile_50: Optional[float]
@@ -24,4 +24,4 @@ class EntitlementSummaryStudentPayload(BaseModel):
 
 
 class EEESummaryStudentPayload(EEESummaryPayload):
-    registry_summary: EntitlementSummaryStudentPayload
+    registry_summary: RegistrySummaryStudentPayload

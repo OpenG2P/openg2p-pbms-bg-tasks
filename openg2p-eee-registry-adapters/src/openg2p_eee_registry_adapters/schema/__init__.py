@@ -5,7 +5,7 @@ from .eee_summary_farmer import (
 )
 from .eee_summary_student import (
     EEESummaryStudentPayload,
-    EntitlementSummaryStudentPayload,
+    RegistrySummaryStudentPayload,
 )
 from .registry import G2PRegistryPayload
 from .registry_farmer import G2PFarmerRegistryPayload

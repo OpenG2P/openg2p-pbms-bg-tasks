@@ -1,16 +1,10 @@
-import enum
 from datetime import datetime
 
 from openg2p_fastapi_common.models import BaseORMModel
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import mapped_column
 
-
-class EnumStatus(enum.Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETE = "complete"
-    NOT_APPLICABLE = "not_applicable"
+from .status_enum import StatusEnum
 
 
 class G2PQueEEERequest(BaseORMModel):
@@ -23,10 +17,10 @@ class G2PQueEEERequest(BaseORMModel):
     )
     brief = mapped_column(Text, nullable=True)
     eligibility_process_status = mapped_column(
-        String, nullable=False, default=EnumStatus.PENDING.value
+        String, nullable=False, default=StatusEnum.PENDING.value
     )
     entitlement_process_status = mapped_column(
-        String, nullable=False, default=EnumStatus.NOT_APPLICABLE.value
+        String, nullable=False, default=StatusEnum.NOT_APPLICABLE.value
     )
     creation_date = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     processed_date = mapped_column(DateTime, default=None, nullable=True)

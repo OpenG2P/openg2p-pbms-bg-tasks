@@ -14,9 +14,10 @@ from ..cache import beneficiary_count_key_builder
 from ..interface import EEERegistryInterface
 from ..models import EEESummaryStudent, G2PStudentRegistry
 from ..schema import (
+    EEEGeneralSummary,
     EEESummaryStudentPayload,
-    EntitlementSummaryStudentPayload,
     G2PStudentRegistryPayload,
+    RegistrySummaryStudentPayload,
 )
 
 
@@ -42,7 +43,7 @@ class EEERegistryStudent(EEERegistryInterface):
         )
 
         summary = EEESummaryStudentPayload(
-            general_summary=EligibilitySummaryStudentPayload(
+            general_summary=EEEGeneralSummary(
                 id=eligibility_summary_student.id,
                 program_id=eligibility_summary_student.program_id,
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
@@ -53,7 +54,7 @@ class EEERegistryStudent(EEERegistryInterface):
                 total_entitlement_amount=eligibility_summary_student.total_entitlement_amount,
                 average_entitlement_per_registrant=eligibility_summary_student.average_entitlement_per_person,
             ),
-            registry_summary=EntitlementSummaryStudentPayload(
+            registry_summary=RegistrySummaryStudentPayload(
                 age_mean=eligibility_summary_student.age_mean,
                 age_quartile_25=eligibility_summary_student.age_quartile_25,
                 age_quartile_50=eligibility_summary_student.age_quartile_50,
