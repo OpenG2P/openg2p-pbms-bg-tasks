@@ -13,3 +13,4 @@ class G2PProgramDefinition(BaseORMModel):
     target_registry_type = mapped_column(String, nullable=False)
     program_status = mapped_column(String, nullable=False)
     max_quantity = mapped_column(Float, nullable=True)
+    disbursement_frequency = mapped_column(String, nullable=True)

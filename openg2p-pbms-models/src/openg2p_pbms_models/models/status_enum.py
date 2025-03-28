@@ -1,5 +1,6 @@
 import enum
 
+
 class StatusEnum(enum.Enum):
     PENDING = "pending"
     PROCESSING = "processing"
