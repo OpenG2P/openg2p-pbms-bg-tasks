@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from openg2p_pbms_models.models import StatusEnum, G2PDisbursementCycle
+from openg2p_pbms_models.models import G2PDisbursementCycle, StatusEnum
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -20,43 +20,60 @@ def disbursement_beat_producer():
 
     with session_maker() as session:
         # Fetch rows with PENDING status for envelope or disbursement processes
-        disbursement_cycles: List[G2PDisbursementCycle] = (
+        g2p_disbursement_cycles: List[G2PDisbursementCycle] = (
             session.execute(
                 select(G2PDisbursementCycle)
                 .filter(
-                    (G2PDisbursementCycle.envelope_creation_status == StatusEnum.PENDING.value)
-                    | (G2PDisbursementCycle.batch_creation_status == StatusEnum.PENDING.value)
+                    (
+                        G2PDisbursementCycle.envelope_creation_status
+                        == StatusEnum.PENDING.value
+                    )
+                    | (
+                        G2PDisbursementCycle.batch_creation_status
+                        == StatusEnum.PENDING.value
+                    )
                 )
                 .limit(_config.batch_size)
             )
             .scalars()
             .all()
         )
-        _logger.debug(f"Found {len(disbursement_cycles)} pending cycle requests")
+        _logger.debug(
+            f"Found {len(g2p_disbursement_cycles)} pending cycle requests"
+        )
 
-        for disbursement_cycle in disbursement_cycles:
-            _logger.info(f"Queueing Disbursement Cycle ID: {disbursement_cycle.id}")
+        for g2p_disbursement_cycle in g2p_disbursement_cycles:
+            _logger.info(f"Queueing Disbursement Cycle ID: {g2p_disbursement_cycle.id}")
 
-            if disbursement_cycle.envelope_creation_status == StatusEnum.PENDING.value:
+            if (
+                g2p_disbursement_cycle.envelope_creation_status
+                == StatusEnum.PENDING.value
+            ):
                 worker_type = "envelope_creation_request_worker"
-                disbursement_cycle.envelope_creation_status = StatusEnum.PROCESSING.value
-            elif disbursement_cycle.batch_creation_status == StatusEnum.PENDING.value:
+                g2p_disbursement_cycle.envelope_creation_status = (
+                    StatusEnum.PROCESSING.value
+                )
+            elif (
+                g2p_disbursement_cycle.batch_creation_status == StatusEnum.PENDING.value
+            ):
                 worker_type = "batch_creation_request_worker"
-                disbursement_cycle.batch_creation_status = StatusEnum.PROCESSING.value
+                g2p_disbursement_cycle.batch_creation_status = (
+                    StatusEnum.PROCESSING.value
+                )
 
             _logger.info(
-                f"Updating status for {worker_type} to PROCESSING in Disbursement Cycle ID: {disbursement_cycle.id}"
+                f"Updating status for {worker_type} to PROCESSING in Disbursement Cycle ID: {g2p_disbursement_cycle.id}"
             )
             session.commit()
 
             # Send task to appropriate celery worker
             celery_app.send_task(
                 worker_type,
-                args=(disbursement_cycle.id,),
-                queue=_config.disbursement_cycle_queue,
+                args=(g2p_disbursement_cycle.id,),
+                queue=_config.g2p_disbursement_cycle_queue,
             )
             _logger.info(
-                f"Sent task to {worker_type} for Disbursement Cycle ID: {disbursement_cycle.id}"
+                f"Sent task to {worker_type} for Disbursement Cycle ID: {g2p_disbursement_cycle.id}"
             )
 
     _logger.info("Completed processing pending Disbursement Cycle requests")

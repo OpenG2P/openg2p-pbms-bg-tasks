@@ -35,5 +35,9 @@ celery_app.conf.beat_schedule = {
         "task": "eee_request_beat_producer",
         "schedule": _config.producer_frequency,
     },
+    "disbursement_beat_producer": {
+        "task": "disbursement_beat_producer",
+        "schedule": _config.producer_frequency,
+    },
 }
 celery_app.conf.timezone = "UTC"
