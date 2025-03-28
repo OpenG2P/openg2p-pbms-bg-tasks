@@ -5,10 +5,10 @@ from openg2p_eee_models.models import EEESummary
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
 from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_pbms_models.models import (
-    EnumStatus,
     G2PEligibilityRuleDefinition,
     G2PProgramDefinition,
     G2PQueEEERequest,
+    StatusEnum,
 )
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
@@ -103,7 +103,7 @@ def eligibility_request_worker(id: int):
                 target_registry_type=g2p_program_definition.target_registry_type,
                 pbms_request_id=g2p_que_eee_request.pbms_request_id,
                 number_of_registrants=len(registrant_ids),
-                date_created=datetime.utcnow(),
+                date_created=datetime.now(datetime.timezone.utc),
             )
             _logger.debug(f"Base summary for queue id {id} is: {base_summary}")
 
@@ -137,9 +137,9 @@ def eligibility_request_worker(id: int):
                 return
 
             # Update eligibility request queue entry status
-            g2p_que_eee_request.eligibility_process_status = EnumStatus.COMPLETE.value
-            g2p_que_eee_request.entitlement_process_status = EnumStatus.PENDING.value
-            g2p_que_eee_request.processed_date = datetime.utcnow()
+            g2p_que_eee_request.eligibility_process_status = StatusEnum.COMPLETE.value
+            g2p_que_eee_request.entitlement_process_status = StatusEnum.PENDING.value
+            g2p_que_eee_request.processed_date = datetime.now(datetime.timezone.utc)
 
             eee_session.commit()
             pbms_session.commit()
@@ -149,8 +149,8 @@ def eligibility_request_worker(id: int):
             _logger.error(error_message)
 
             if g2p_que_eee_request:
-                g2p_que_eee_request.processed_date = datetime.utcnow()
-                # queue_entry.task_status = EnumStatus.FAILED
+                g2p_que_eee_request.processed_date = datetime.now(datetime.timezone.utc)
+                # queue_entry.task_status = StatusEnum.FAILED
                 pbms_session.commit()
 
         _logger.info(f"Completed processing eligibility request for queue id: {id}")

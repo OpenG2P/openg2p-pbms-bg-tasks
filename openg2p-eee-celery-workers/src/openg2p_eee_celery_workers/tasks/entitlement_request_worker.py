@@ -6,10 +6,10 @@ from openg2p_eee_models.models import EEEDetails
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
 from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_pbms_models.models import (
-    EnumStatus,
     G2PEntitlementRuleDefinition,
     G2PProgramDefinition,
     G2PQueEEERequest,
+    StatusEnum,
 )
 from sqlalchemy.orm import sessionmaker
 
@@ -151,8 +151,8 @@ def entitlement_request_worker(id: int):
                 return
 
             # Update entitlement request queue entry status
-            g2p_que_eee_request.entitlement_process_status = EnumStatus.COMPLETE.value
-            g2p_que_eee_request.processed_date = datetime.utcnow()
+            g2p_que_eee_request.entitlement_process_status = StatusEnum.COMPLETE.value
+            g2p_que_eee_request.processed_date = datetime.now(datetime.timezone.utc)
 
             eee_session.commit()
             pbms_session.commit()
@@ -162,8 +162,8 @@ def entitlement_request_worker(id: int):
             _logger.error(error_message)
 
             if g2p_que_eee_request:
-                g2p_que_eee_request.processed_date = datetime.utcnow()
-                # queue_entry.task_status = EnumStatus.FAILED
+                g2p_que_eee_request.processed_date = datetime.now(datetime.timezone.utc)
+                # queue_entry.task_status = StatusEnum.FAILED
                 pbms_session.commit()
 
         _logger.info(f"Completed processing entitlement request for queue id: {id}")
