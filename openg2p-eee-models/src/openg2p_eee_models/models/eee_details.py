@@ -4,8 +4,8 @@ from sqlalchemy.orm import mapped_column
 
 
 class EEEDetails(BaseORMModel):
-    __tablename__ = "g2p_eee_details"
+    __tablename__ = "eee_details"
 
     pbms_request_id = mapped_column(String, primary_key=True)
     registrant_id = mapped_column(Integer, primary_key=True)
-    quantity = mapped_column(Float, nullable=False)
+    quantity = mapped_column(Float, nullable=False, default=0.0)

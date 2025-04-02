@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
-from openg2p_fastapi_common.models import BaseORMModel
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import mapped_column
 
+from .base import BaseORMModel
 from .status_enum import StatusEnum
 
 

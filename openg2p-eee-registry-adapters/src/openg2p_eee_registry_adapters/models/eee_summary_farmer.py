@@ -4,7 +4,7 @@ from sqlalchemy.orm import mapped_column
 
 
 class EEESummaryFarmer(EEESummary):
-    __tablename__ = "g2p_eee_summary_farmer"
+    __tablename__ = "eee_summary_farmer"
 
     land_holding_quartile_25 = mapped_column(Float, nullable=True)
     land_holding_quartile_50 = mapped_column(Float, nullable=True)

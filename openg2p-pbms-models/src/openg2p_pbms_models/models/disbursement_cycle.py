@@ -1,7 +1,7 @@
-from openg2p_fastapi_common.models import BaseORMModel
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import mapped_column
 
+from .base import BaseORMModel
 from .status_enum import StatusEnum
 
 

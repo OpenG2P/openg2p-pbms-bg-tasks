@@ -1,6 +1,7 @@
-from openg2p_fastapi_common.models import BaseORMModel
 from sqlalchemy import Float, Integer, String
 from sqlalchemy.orm import mapped_column
+
+from .base import BaseORMModel
 
 
 class G2PProgramDefinition(BaseORMModel):
