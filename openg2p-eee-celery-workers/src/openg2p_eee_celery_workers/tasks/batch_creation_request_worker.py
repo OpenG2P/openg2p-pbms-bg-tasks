@@ -1,20 +1,13 @@
 import logging
 from datetime import datetime
 from typing import List
-import requests
-from sqlalchemy import select
-from openg2p_eee_models.models import EEESummary,EEEDetails, DisbursementBatchStatus
-from openg2p_eee_registry_adapters.factory import EEERegistryFactory
-from openg2p_eee_registry_adapters.interface import EEERegistryInterface
-from openg2p_eee_registry_adapters.schema import EEESummaryPayload
+
+from openg2p_eee_models.models import DisbursementBatch, EEEDetails
 from openg2p_pbms_models.models import (
-    StatusEnum,
-    G2PRegistry,
     G2PDisbursementCycle,
-    G2PProgramDefinition,
-    
+    StatusEnum,
 )
-from openg2p_g2p_bridge_models.schemas import DisbursementEnvelopePayload, DisbursementEnvelopeRequest, DisbursementEnvelopeResponse
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
@@ -23,6 +16,7 @@ from ..config import Settings
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
 _engine = get_engine()
+
 
 @celery_app.task(name="batch_creation_request_worker")
 def batch_creation_request_worker(id: int):
@@ -46,11 +40,7 @@ def batch_creation_request_worker(id: int):
 
             if not g2p_disbursement_cycle:
                 raise Exception(f"No queue entry found for queue id: {id}")
-            
-            eee_registry_interface: EEERegistryInterface = (
-                    EEERegistryFactory.get_computation_class(g2p_disbursement_cycle.target_registry_type)
-                )
-            
+
             # Get registrants
             registrant_ids = eee_session.execute(
                 select(EEEDetails.registrant_id).where(
@@ -69,8 +59,8 @@ def batch_creation_request_worker(id: int):
             _logger.info(f"Total batches created: {len(batches)}")
 
             for batch in batches:
-                # Create DisbursementBatchStatus records
-                disbursement_batch_status = DisbursementBatchStatus(
+                # Create DisbursementBatch records
+                disbursement_batch = DisbursementBatch(
                     disbursement_cycle_id=g2p_disbursement_cycle.id,
                     program_id=g2p_disbursement_cycle.program_id,
                     bridge_envelope_id=g2p_disbursement_cycle.bridge_envelope_id,
@@ -78,17 +68,19 @@ def batch_creation_request_worker(id: int):
                     registrant_ids=batch,
                     disbursement_status=StatusEnum.PENDING.value,
                 )
-                eee_session.add(disbursement_batch_status)
-            
+                eee_session.add(disbursement_batch)
+
             # Commit the changes to the database
             eee_session.commit()
-            _logger.info("DisbursementBatchStatus records created successfully")
+            _logger.info("DisbursementBatch records created successfully")
 
             g2p_disbursement_cycle.batch_creation_status = StatusEnum.SUCCESS.value
             g2p_disbursement_cycle.batch_creation_latest_error_code = None
             g2p_disbursement_cycle.batch_creation_attempts += 1
-            g2p_disbursement_cycle.batch_creation_timestamp = datetime.now(datetime.timezone.utc)
-            pbms_session.commit() 
+            g2p_disbursement_cycle.batch_creation_latest_timestamp = datetime.now(
+                datetime.timezone.utc
+            )
+            pbms_session.commit()
 
         except Exception as e:
             _logger.error(f"Error in batch creation request worker: {e}")

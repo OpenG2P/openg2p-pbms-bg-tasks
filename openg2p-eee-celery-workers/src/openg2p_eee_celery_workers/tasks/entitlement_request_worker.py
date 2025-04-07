@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from openg2p_eee_models.models import EEEDetails
@@ -152,7 +152,7 @@ def entitlement_request_worker(id: int):
 
             # Update entitlement request queue entry status
             g2p_que_eee_request.entitlement_process_status = StatusEnum.COMPLETE.value
-            g2p_que_eee_request.processed_date = datetime.now(datetime.timezone.utc)
+            g2p_que_eee_request.processed_date = datetime.now(timezone.utc)
 
             eee_session.commit()
             pbms_session.commit()
@@ -162,7 +162,7 @@ def entitlement_request_worker(id: int):
             _logger.error(error_message)
 
             if g2p_que_eee_request:
-                g2p_que_eee_request.processed_date = datetime.now(datetime.timezone.utc)
+                g2p_que_eee_request.processed_date = datetime.now(timezone.utc)
                 # queue_entry.task_status = StatusEnum.FAILED
                 pbms_session.commit()
 
