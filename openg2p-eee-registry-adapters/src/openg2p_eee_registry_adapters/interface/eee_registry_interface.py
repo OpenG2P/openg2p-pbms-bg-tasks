@@ -17,7 +17,7 @@ class EEERegistryInterface(ABC):
     """
 
     @abstractmethod
-    async def get_summary(
+    def get_summary(
         self, pbms_request_id: str, eee_session: Session
     ) -> EEESummaryPayload:
         # Abstract method to get summary statistics

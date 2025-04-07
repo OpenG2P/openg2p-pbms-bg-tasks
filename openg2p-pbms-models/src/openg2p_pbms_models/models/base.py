@@ -1,4 +1,5 @@
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase
+
 
 class BaseORMModel(DeclarativeBase):
     __enabled__ = True

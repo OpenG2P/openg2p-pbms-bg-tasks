@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from typing import List
 
@@ -20,6 +21,8 @@ from ..schema import (
     RegistrySummaryStudentPayload,
 )
 
+_logger = logging.getLogger("openg2p_eee_registry_adapters")
+
 
 class EEERegistryStudent(EEERegistryInterface):
     """Fetches student data and computes summary statistics"""
@@ -27,14 +30,16 @@ class EEERegistryStudent(EEERegistryInterface):
     # ===================
     # Summary API Methods
     # ===================
-    async def get_summary(
-        self, request_id: int, eee_session: Session
+    def get_summary(
+        self, pbms_request_id: int, eee_session: Session
     ) -> EEESummaryStudentPayload:
+        _logger.info(f"Fetching summary for pbms_request_id: {pbms_request_id}")
+        _logger.info(f"Type of session: {(eee_session)}")
         eligibility_summary_student = (
             (
-                await eee_session.execute(
+                eee_session.execute(
                     select(EEESummaryStudent).where(
-                        EEESummaryStudent.pbms_request_id == request_id
+                        EEESummaryStudent.pbms_request_id == pbms_request_id
                     )
                 )
             )
