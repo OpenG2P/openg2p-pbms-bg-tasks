@@ -1,7 +1,7 @@
 import enum
 
 from openg2p_fastapi_common.models import BaseORMModel
-from sqlalchemy import JSON, DateTime, Integer, String, ForeignKey
+from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import mapped_column
 
 
@@ -13,13 +13,11 @@ class StatusEnum(enum.Enum):
 
 
 class Disbursement(BaseORMModel):
-    __tablename__ = 'bridge_disbursements'
+    __tablename__ = "bridge_disbursements"
 
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
     bridge_disbursement_id = mapped_column(String, nullable=False, index=True)
-    disbursement_batch_id = mapped_column(
-        Integer, index=True, nullable=False
-    )
+    disbursement_batch_id = mapped_column(Integer, index=True, nullable=False)
     registrant_id = mapped_column(Integer, nullable=False, index=True)
     bridge_disbursement_status = mapped_column(
         String, nullable=False, default=StatusEnum.PENDING.value
