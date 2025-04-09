@@ -1,12 +1,16 @@
 import logging
 from datetime import datetime, timezone
-import requests
 
-from openg2p_eee_models.models import EEEDetails, DisbursementBatch, Disbursement
+import requests
+from openg2p_eee_models.models import Disbursement, DisbursementBatch, EEEDetails
+from openg2p_g2p_bridge_models.schemas import (
+    DisbursementPayload,
+    DisbursementRequest,
+    DisbursementResponse,
+)
 from openg2p_pbms_models.models import StatusEnum
-from openg2p_g2p_bridge_models.schemas import DisbursementPayload, DisbursementRequest, DisbursementResponse
-from sqlalchemy.orm import sessionmaker 
 from sqlalchemy import select
+from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
@@ -46,10 +50,11 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session):
                 response_error_codes=None
             )
             disbursement_payloads.append(payload)
-        
+
         disbursement_request = DisbursementRequest(message=disbursement_payloads)
         _logger.info(f"Disbursement request payload: {disbursement_request}")
-        disbursement_url = _config.disbursement_url
+
+        disbursement_url = _config.g2p_bridge_disbursement_url
         _logger.info(f"Disbursement URL: {disbursement_url}")
 
         response = requests.post(disbursement_url, json=disbursement_request.model_dump_json())

@@ -31,21 +31,18 @@ class EEERegistryStudent(EEERegistryInterface):
     # Summary API Methods
     # ===================
     def get_summary(
-        self, pbms_request_id: int, eee_session: Session
+        self, pbms_request_id: int, eee_session: AsyncSession
     ) -> EEESummaryStudentPayload:
         _logger.info(f"Fetching summary for pbms_request_id: {pbms_request_id}")
         _logger.info(f"Type of session: {(eee_session)}")
         eligibility_summary_student = (
-            (
-                eee_session.execute(
-                    select(EEESummaryStudent).where(
-                        EEESummaryStudent.pbms_request_id == pbms_request_id
-                    )
+            eee_session.execute(
+                select(EEESummaryStudent).where(
+                    EEESummaryStudent.pbms_request_id == pbms_request_id
                 )
             )
-            .scalars()
-            .first()
         )
+        eligibility_summary_student = eligibility_summary_student.scalars().first()
 
         summary = EEESummaryStudentPayload(
             general_summary=EEEGeneralSummary(

@@ -26,20 +26,17 @@ class EEERegistryFarmer(EEERegistryInterface):
     # ===================
     # Summary API Methods
     # ===================
-    async def get_summary(
+    def get_summary(
         self, pbms_request_id: str, eee_session: AsyncSession
     ) -> EEESummaryFarmerPayload:
         eligibility_summary_farmer = (
-            (
-                await eee_session.execute(
-                    select(EEESummaryFarmer).where(
-                        EEESummaryFarmer.pbms_request_id == pbms_request_id
-                    )
+            eee_session.execute(
+                select(EEESummaryFarmer).where(
+                    EEESummaryFarmer.pbms_request_id == pbms_request_id
                 )
             )
-            .scalars()
-            .first()
         )
+        eligibility_summary_farmer = eligibility_summary_farmer.scalars().first()
 
         summary = EEESummaryFarmerPayload(
             general_summary=EEEGeneralSummary(
