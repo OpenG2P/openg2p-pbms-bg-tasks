@@ -30,12 +30,12 @@ class EEERegistryStudent(EEERegistryInterface):
     # ===================
     # Summary API Methods
     # ===================
-    def get_summary(
+    async def get_summary(
         self, pbms_request_id: int, eee_session: AsyncSession
     ) -> EEESummaryStudentPayload:
         _logger.info(f"Fetching summary for pbms_request_id: {pbms_request_id}")
         _logger.info(f"Type of session: {(eee_session)}")
-        eligibility_summary_student = (
+        eligibility_summary_student = await (
             eee_session.execute(
                 select(EEESummaryStudent).where(
                     EEESummaryStudent.pbms_request_id == pbms_request_id
@@ -148,7 +148,7 @@ class EEERegistryStudent(EEERegistryInterface):
         self,
         sr_session: AsyncSession,
         pbms_request_id: str,
-        registrant_ids: List[int],
+        registrant_ids: List[str],
         search_query: str,
     ) -> int:
         (
@@ -203,7 +203,7 @@ class EEERegistryStudent(EEERegistryInterface):
     def get_registrants(self, registrant_ids, sr_session) -> List[G2PStudentRegistry]:
         return (
             sr_session.query(G2PStudentRegistry)
-            .filter(G2PStudentRegistry.id.in_(registrant_ids))
+            .filter(G2PStudentRegistry.unique_id.in_(registrant_ids))
             .all()
         )
 
@@ -220,7 +220,7 @@ class EEERegistryStudent(EEERegistryInterface):
     # Entitlement Celery Worker Methods
     # =================================
     def get_is_registant_entitled(
-        self, registrant_id: int, sql_query: str, sr_session: Session
+        self, registrant_id: str, sql_query: str, sr_session: Session
     ) -> bool:
         sql_query_with_registrant_id = (
             self.construct_get_is_registrant_entitled_sql_query(

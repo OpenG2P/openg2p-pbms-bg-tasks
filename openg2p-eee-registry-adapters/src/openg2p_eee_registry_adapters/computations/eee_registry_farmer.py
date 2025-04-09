@@ -26,10 +26,10 @@ class EEERegistryFarmer(EEERegistryInterface):
     # ===================
     # Summary API Methods
     # ===================
-    def get_summary(
+    async def get_summary(
         self, pbms_request_id: str, eee_session: AsyncSession
     ) -> EEESummaryFarmerPayload:
-        eligibility_summary_farmer = (
+        eligibility_summary_farmer = await (
             eee_session.execute(
                 select(EEESummaryFarmer).where(
                     EEESummaryFarmer.pbms_request_id == pbms_request_id
@@ -89,12 +89,14 @@ class EEERegistryFarmer(EEERegistryInterface):
         page_size=10,
         order_by="id asc",
     ) -> EEEBeneficiarySearchResponsePayload:
-        registrant_ids = await eee_session.execute(
-            select(EEEDetails.registrant_id).where(
-                EEEDetails.pbms_request_id == pbms_request_id
+        registrant_ids = await (
+            eee_session.execute(
+                select(EEEDetails.registrant_id).where(
+                    EEEDetails.pbms_request_id == pbms_request_id
+                )
             )
         )
-        registrant_ids: List[int] = registrant_ids.scalars().all()
+        registrant_ids: List[str] = registrant_ids.scalars().all()
 
         # TODO: Implement batching in beneficiary search
         (
@@ -147,7 +149,7 @@ class EEERegistryFarmer(EEERegistryInterface):
         self,
         sr_session: AsyncSession,
         pbms_request_id: str,
-        registrant_ids: List[int],
+        registrant_ids: List[str],
         search_query: str,
     ) -> int:
         print("")
@@ -201,7 +203,7 @@ class EEERegistryFarmer(EEERegistryInterface):
     def get_registrants(self, registrant_ids, sr_session) -> List[G2PFarmerRegistry]:
         return (
             sr_session.query(G2PFarmerRegistry)
-            .filter(G2PFarmerRegistry.id.in_(registrant_ids))
+            .filter(G2PFarmerRegistry.unique_id.in_(registrant_ids))
             .all()
         )
 
@@ -209,7 +211,7 @@ class EEERegistryFarmer(EEERegistryInterface):
     # Entitlement Celery Worker Methods
     # =================================
     def get_is_registant_entitled(
-        self, registrant_id: int, sql_query: str, sr_session: Session
+        self, registrant_id: str, sql_query: str, sr_session: Session
     ) -> bool:
         sql_query_with_registrant_id = (
             self.construct_get_is_registrant_entitled_sql_query(

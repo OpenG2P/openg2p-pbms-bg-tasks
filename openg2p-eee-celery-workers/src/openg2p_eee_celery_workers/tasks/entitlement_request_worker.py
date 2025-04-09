@@ -123,8 +123,6 @@ def entitlement_request_worker(id: int):
                     f"Entitlement processed for registrant_id {eee_detail.registrant_id} for pbms_request_id {eee_detail.pbms_request_id}"
                 )
 
-            # TODO: get the populated entitlements array and call adapter interface and pass (pbms_request_id,entitlemnts, <sessions>)
-            #       interface will calculate the entitlement summary fields and add them to the EEESummary(farmer/student) table
             _logger.info(
                 f"Computing and updating entitlement summary statistics for pbms_request_id: {eee_detail.pbms_request_id}"
             )
