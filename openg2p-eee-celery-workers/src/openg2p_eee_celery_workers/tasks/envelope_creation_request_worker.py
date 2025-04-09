@@ -10,6 +10,7 @@ from openg2p_g2p_bridge_models.schemas import (
     DisbursementEnvelopeRequest,
     DisbursementEnvelopeResponse,
 )
+from openg2p_g2pconnect_common_lib.schemas import RequestHeader
 from openg2p_pbms_models.models import (
     G2PDeliveryCodes,
     G2PDisbursementCycle,
@@ -44,21 +45,38 @@ def create_disbursement_envelope(
         benefit_program_mnemonic=program_definition.program_mnemonic,
         cycle_code_mnemonic=disbursement_cycle.cycle_mnemonic,
         number_of_beneficiaries=eee_summary_payload.general_summary.number_of_registrants,
+        number_of_disbursements=eee_summary_payload.general_summary.number_of_registrants,
         total_disbursement_amount=eee_summary_payload.general_summary.total_entitlement_amount,
         disbursement_schedule_date=disbursement_cycle.disbursement_schedule_date,
         disbursement_frequency=program_definition.disbursement_frequency.value,
         disbursement_currency_code=delivery_code.measurement_unit,  # TODO Add a separate unit for currency ISO
     )
 
-    disbursement_envelope_request: DisbursementEnvelopeRequest = (
-        DisbursementEnvelopeRequest(message=envelope_payload)
+    # TODO: Refactor later
+    disbursement_envelope_request_header = RequestHeader(
+        version="1.0.0",
+        message_id="string",
+        message_ts="string",
+        action="string",
+        sender_id="string",
+        sender_uri="",
+        receiver_id="",
+        total_count=0,
+        is_msg_encrypted=False,
+        meta="string"
     )
+    disbursement_envelope_request: DisbursementEnvelopeRequest = (
+        DisbursementEnvelopeRequest(
+            header=disbursement_envelope_request_header,
+            message=envelope_payload)
+    )
+    _logger.info(f"Disbursement Envelope Request: {disbursement_envelope_request.model_dump(mode='json')}")
 
     envelope_creation_url = _config.g2p_bridge_envelope_creation_url
 
     try:
         response = requests.post(
-            envelope_creation_url, json=disbursement_envelope_request.model_dump_json()
+            envelope_creation_url, json=disbursement_envelope_request.model_dump(mode='json')
         )
         response.raise_for_status()
 
@@ -90,8 +108,7 @@ def envelope_creation_request_worker(id: int):
                 .first()
             )
 
-            # Get ProgramDef
-
+            # Get ProgramDefinition using program_id from disbursement_cycle
             program_definition = (
                 pbms_session.query(G2PProgramDefinition)
                 .filter(G2PProgramDefinition.id == disbursement_cycle.program_id)
@@ -143,7 +160,7 @@ def envelope_creation_request_worker(id: int):
             )
             disbursement_cycle.envelope_creation_attempts += 1
             disbursement_cycle.envelope_creation_latest_error_code = None
-            disbursement_cycle.envelope_creation_status = StatusEnum.SUCCESS.value
+            disbursement_cycle.envelope_creation_status = StatusEnum.COMPLETE.value
             disbursement_cycle.envelope_creation_latest_timestamp = datetime.now()
             disbursement_cycle.batch_creation_status = StatusEnum.PENDING.value
             pbms_session.commit()
@@ -159,4 +176,3 @@ def envelope_creation_request_worker(id: int):
                 disbursement_cycle.envelope_creation_latest_timestamp = datetime.now()
                 pbms_session.commit()
             raise e #TODO: Remove
- 

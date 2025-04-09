@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import Date, DateTime, Integer, String
 from sqlalchemy.orm import mapped_column
 
 from .base import BaseORMModel
@@ -23,7 +23,7 @@ class G2PDisbursementCycle(BaseORMModel):
     envelope_creation_attempts = mapped_column(Integer, default=0)
     batch_creation_latest_error_code = mapped_column(String, nullable=True)
     batch_creation_attempts = mapped_column(Integer, default=0)
-    disbursement_schedule_date = mapped_column(DateTime, nullable=False)
+    disbursement_schedule_date = mapped_column(Date, nullable=False)
     envelope_creation_latest_timestamp = mapped_column(
         DateTime(), default=None, nullable=True
     )
