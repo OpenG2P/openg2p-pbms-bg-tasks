@@ -8,6 +8,7 @@ from celery import Celery
 from openg2p_fastapi_common.app import Initializer as BaseInitializer
 from openg2p_fastapi_common.exception import BaseExceptionHandler
 from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 
 
 class Initializer(BaseInitializer):
@@ -22,10 +23,12 @@ def get_engine():
         db_engine_eee = create_engine(_config.db_datasource_eee)
         db_engine_sr = create_engine(_config.db_datasource_sr)
         db_engine_pbms = create_engine(_config.db_datasource_pbms)
+        db_engine_eee_async = create_async_engine(_config.db_datasource_eee_async)
         return {
             "db_engine_eee": db_engine_eee,
             "db_engine_sr": db_engine_sr,
             "db_engine_pbms": db_engine_pbms,
+            "db_engine_eee_async": db_engine_eee_async,
         }
 
 
