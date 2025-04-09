@@ -47,7 +47,7 @@ def batch_creation_request_worker(id: int):
                     EEEDetails.pbms_request_id == g2p_disbursement_cycle.pbms_request_id
                 )
             )
-            registrant_ids: List[int] = registrant_ids.scalars().all()
+            registrant_ids: List[str] = registrant_ids.scalars().all()
 
             disbursement_batch_size = _config.disbursement_batch_size
 

@@ -18,12 +18,12 @@ class Disbursement(BaseORMModel):
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
     bridge_disbursement_id = mapped_column(String, nullable=False, index=True)
     disbursement_batch_id = mapped_column(Integer, index=True, nullable=False)
-    registrant_id = mapped_column(Integer, nullable=False, index=True)
-    bridge_disbursement_status = mapped_column(
+    registrant_id = mapped_column(String, nullable=False, index=True)
+    bridge_downstream_status = mapped_column(
         String, nullable=False, default=StatusEnum.PENDING.value
     )
-    bridge_disbursement_error_code = mapped_column(String, nullable=True)
-    disbursement_attempts = mapped_column(Integer, default=0)
-    disbursement_latest_timestamp = mapped_column(
+    bridge_downstream_error_code = mapped_column(String, nullable=True)
+    bridge_polling_attempts = mapped_column(Integer, default=0)
+    bridge_polling_latest_timestamp = mapped_column(
         DateTime(), default=None, nullable=True
     )

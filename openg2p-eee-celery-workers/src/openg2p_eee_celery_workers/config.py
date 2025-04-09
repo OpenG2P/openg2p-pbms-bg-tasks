@@ -22,6 +22,7 @@ class Settings(BaseSettings):
         "postgresql://postgres:postgres@localhost:5432/socialregistrydb"
     )
     db_datasource_pbms: str = "postgresql://postgres:postgres@localhost:5432/pbmsdb"
+    db_datasource_eee_async: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/eeedb"
 
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"

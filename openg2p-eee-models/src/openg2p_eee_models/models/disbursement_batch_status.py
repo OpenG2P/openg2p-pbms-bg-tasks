@@ -24,7 +24,7 @@ class DisbursementBatch(BaseORMModel):
     disbursement_status = mapped_column(
         String, nullable=False, default=StatusEnum.PENDING.value
     )
-    bridge_disbursement_status_error_code = mapped_column(String, nullable=True)
+    bridge_disbursement_error_code = mapped_column(String, nullable=True)
     bridge_disbursement_status_attempts = mapped_column(Integer, default=0)
     bridge_disbursement_status_latest_timestamp = mapped_column(
         DateTime(), default=None, nullable=True
