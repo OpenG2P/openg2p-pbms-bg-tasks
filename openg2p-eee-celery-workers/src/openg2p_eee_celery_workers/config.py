@@ -28,10 +28,10 @@ class Settings(BaseSettings):
     celery_backend_url: str = "redis://localhost:6379/0"
 
     g2p_bridge_disbursement_url: str = (
-        "https://g2p-bridge.dev.openg2p.org/api/g2p-bridge/create_disbursements"
+        "http://g2p_bridge_disbursement_url"
     )
     g2p_bridge_envelope_creation_url: str = (
-        "https://g2p-bridge.dev.openg2p.org/api/g2p-bridge/create_disbursement_envelope"
+        "http://g2p_bridge_envelope_creation_url"
     )
     disbursement_batch_size: int = 500
 
