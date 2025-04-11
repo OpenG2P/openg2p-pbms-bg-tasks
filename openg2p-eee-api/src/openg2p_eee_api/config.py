@@ -24,5 +24,3 @@ class Settings(BaseSettings):
     db_datasource_sr: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:5432/socialregistrydb"
     )
-    db_dbname: str = "eeedb"
-    db_dbuser: str = "postgres"

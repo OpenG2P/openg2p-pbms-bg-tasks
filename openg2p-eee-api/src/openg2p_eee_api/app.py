@@ -2,10 +2,6 @@
 import asyncio
 import logging
 
-from .config import Settings
-
-_config = Settings.get_config()
-
 from openg2p_eee_models.models import (
     Disbursement,
     DisbursementBatch,
@@ -14,10 +10,14 @@ from openg2p_eee_models.models import (
 )
 from openg2p_eee_registry_adapters.cache import init_cache
 from openg2p_fastapi_common.app import Initializer as BaseInitializer
+from openg2p_fastapi_common.context import dbengine
+from sqlalchemy.ext.asyncio import create_async_engine
 
+from .config import Settings
 from .controllers import EEEBeneficiarySearchController, EEESummaryController
 from .services import EEEBeneficiarySearchService, EEESummaryService
 
+_config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
 
 
@@ -29,6 +29,13 @@ class Initializer(BaseInitializer):
         EEEBeneficiarySearchService()
         EEESummaryController().post_init()
         EEEBeneficiarySearchController().post_init()
+
+    def init_db(self):
+        if _config.db_datasource:
+            db_engine = create_async_engine(
+                _config.db_datasource_eee, echo=_config.db_logging
+            )
+            dbengine.set(db_engine)
 
     def migrate_database(self, args):
         _logger.info(f"Database migration completed{_config.db_datasource_eee}")
