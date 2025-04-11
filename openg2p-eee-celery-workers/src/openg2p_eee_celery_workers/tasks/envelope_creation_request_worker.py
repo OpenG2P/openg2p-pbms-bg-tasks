@@ -73,9 +73,10 @@ def create_disbursement_envelope(
             message=envelope_payload
         )
     )
-    _logger.info(f"Disbursement Envelope Request: {disbursement_envelope_request.model_dump(mode='json')}")
+    _logger.debug(f"Disbursement Envelope Request: {disbursement_envelope_request.model_dump(mode='json')}")
 
     envelope_creation_url = _config.g2p_bridge_envelope_creation_url
+    _logger.debug(f"Envelope Creation URL: {envelope_creation_url}")
 
     try:
         response = requests.post(
@@ -176,6 +177,8 @@ def envelope_creation_request_worker(id: int):
             disbursement_cycle.batch_creation_status = StatusEnum.PENDING.value
             pbms_session.commit()
 
+            _logger.info(f"Envelope creation successful for disbursement cycle id: {id}")
+
         except Exception as e:
             _logger.error(
                 f"Exception occurred while processing envelope creation request: {e}"
@@ -186,4 +189,3 @@ def envelope_creation_request_worker(id: int):
                 disbursement_cycle.envelope_creation_status = StatusEnum.PENDING.value
                 disbursement_cycle.envelope_creation_latest_timestamp = datetime.now()
                 pbms_session.commit()
-            raise e #TODO: Remove
