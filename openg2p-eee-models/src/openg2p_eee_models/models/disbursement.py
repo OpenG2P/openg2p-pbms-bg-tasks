@@ -1,15 +1,8 @@
-import enum
-
 from openg2p_fastapi_common.models import BaseORMModel
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import mapped_column
 
-
-class StatusEnum(enum.Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETE = "complete"
-    NOT_APPLICABLE = "not_applicable"
+from .status_enum import StatusEnum
 
 
 class Disbursement(BaseORMModel):
