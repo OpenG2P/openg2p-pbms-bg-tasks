@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import date
 from typing import List
@@ -167,14 +168,18 @@ class EEERegistryStudent(EEERegistryInterface):
     # Eligibility Celery Worker Methods
     # =================================
     def compute_and_persist_summary(
-        self, registrant_ids, base_summary, sr_session: Session, eee_session: Session
+        self, eee_details: List[dict], base_summary, sr_session: Session, eee_session: Session
     ):
-        registrants = self.get_registrants(registrant_ids, sr_session)
-        students_age = [
-            self.calculate_age(student.date_of_birth)
-            for student in registrants
-            if student.date_of_birth
-        ]
+        students_age = []
+
+        for eee_detail in eee_details:
+            registrant_ids = []
+            for registrant in json.loads(eee_detail["registrant_details"]):
+                registrant_ids.append(registrant["registrant_id"])
+
+            registrants = self.get_registrants(registrant_ids, sr_session)
+            for student in registrants:
+                students_age.append(self.calculate_age(student.date_of_birth))
 
         student_summary = EEESummaryStudent(
             program_id=base_summary.program_id,
@@ -219,6 +224,18 @@ class EEERegistryStudent(EEERegistryInterface):
     # =================================
     # Entitlement Celery Worker Methods
     # =================================
+
+    def lock_and_update_summary(
+        self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
+    ) -> None:
+        try:
+            summary_student = eee_session.query(EEESummaryStudent).filter_by(pbms_request_id = pbms_request_id).with_for_update().one()
+            summary_student.number_of_entitlements_processed += number_of_registrants
+            eee_session.commit()
+        except Exception as e:
+            eee_session.rollback()
+            raise e
+
     def get_is_registant_entitled(
         self, registrant_id: str, sql_query: str, sr_session: Session
     ) -> bool:
@@ -232,10 +249,20 @@ class EEERegistryStudent(EEERegistryInterface):
         return result is not None
 
     def compute_entitlements_and_modify_summary(
-        self, entitlements: List[float], pbms_request_id: str, eee_session: Session
+        self, pbms_request_id: str, eee_session: Session
     ):
-        if not entitlements:
+        summary_student = eee_session.query(EEESummaryStudent).filter_by(pbms_request_id = pbms_request_id).first()
+
+        if summary_student.number_of_entitlements_processed != summary_student.number_of_registrants:
             return
+
+        eee_details = eee_session.query(EEEDetails).filter_by(pbms_request_id = pbms_request_id).all()
+
+        entitlements = []
+
+        for eee_detail in eee_details:
+            for registrant_detail in eee_detail.registrant_details:
+                entitlements.append(registrant_detail["entitlement_quantity"])
 
         entitlement_values = np.array(entitlements)
 
@@ -252,7 +279,7 @@ class EEERegistryStudent(EEERegistryInterface):
             np.percentile(entitlement_values, 75, method="midpoint")
         )
 
-        # Update g2p_eligibility_summary_farmer record
+        # Update g2p_eligibility_summary_student record
         eee_session.execute(
             update(EEESummaryStudent)
             .where(EEESummaryStudent.pbms_request_id == pbms_request_id)

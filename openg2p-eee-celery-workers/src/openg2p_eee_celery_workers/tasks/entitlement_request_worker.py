@@ -1,8 +1,10 @@
+import json
 import logging
 from datetime import datetime, timezone
 from typing import List
 
 from openg2p_eee_models.models import EEEDetails
+from openg2p_eee_models.schemas import RegistrantDetails
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
 from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_pbms_models.models import (
@@ -35,17 +37,27 @@ def entitlement_request_worker(id: int):
     )
 
     with eee_session_maker() as eee_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
-        g2p_que_eee_request = None
+        eee_details = None
         try:
             # Fetch the queue entry from pbms db using id
-            g2p_que_eee_request = (
-                pbms_session.query(G2PQueEEERequest)
-                .filter(G2PQueEEERequest.id == id)
+            eee_details = (
+                eee_session.query(EEEDetails)
+                .filter(EEEDetails.id == id)
                 .first()
             )
+            if not eee_details:
+                _logger.error(f"No EEEDetails entry found for id: {id}")
+                return
 
+            g2p_que_eee_request = (
+                pbms_session.query(G2PQueEEERequest)
+                .filter(G2PQueEEERequest.pbms_request_id == eee_details.pbms_request_id)
+                .first()
+            )
             if not g2p_que_eee_request:
-                _logger.error(f"No queue entry found for queue id: {id}")
+                _logger.error(
+                    f"No G2PQueEEERequest entry found for pbms_request_id: {eee_details.pbms_request_id}"
+                )
                 return
 
             target_registry_type, max_quantity = (
@@ -66,18 +78,12 @@ def entitlement_request_worker(id: int):
                 .all()
             )
 
-            eee_details = (
-                eee_session.query(EEEDetails)
-                .filter(
-                    EEEDetails.pbms_request_id == g2p_que_eee_request.pbms_request_id
-                )
-                .all()
-            )
+            registrant_details_list: List[RegistrantDetails] = []
 
-            entitlements: List[float] = []
+            for registrant_details_json in eee_details.registrant_details:
+                registrant_details = RegistrantDetails(**registrant_details_json)
 
-            for eee_detail in eee_details:
-                if max_quantity and (eee_detail.quantity == max_quantity):
+                if max_quantity and (registrant_details.entitlement_quantity == max_quantity):
                     continue
                 else:
                     for entitlement_rule_definition in entitlement_rule_definitions:
@@ -89,42 +95,46 @@ def entitlement_request_worker(id: int):
                             )
                             is_registrant_entitled: bool = (
                                 eee_registry_interface.get_is_registant_entitled(
-                                    eee_detail.registrant_id,
+                                    registrant_details.registrant_id,
                                     entitlement_rule_definition.sql_query,
                                     sr_session,
                                 )
                             )
                             if is_registrant_entitled:
-                                eee_detail.quantity = (
+                                registrant_details.entitlement_quantity = (
                                     min(
-                                        eee_detail.quantity
+                                        registrant_details.entitlement_quantity
                                         + entitlement_rule_definition.quantity,
                                         max_quantity,
                                     )
                                     if max_quantity
                                     else (
-                                        eee_detail.quantity
+                                        registrant_details.entitlement_quantity
                                         + entitlement_rule_definition.quantity
                                     )
                                 )
 
                         except Exception as e:
                             _logger.error(
-                                f"Error processing entitlement rule id {entitlement_rule_definition.id} for registrant id {eee_detail.registrant_id} in request queue id {id}: {e}"
+                                f"Error processing entitlement rule id {entitlement_rule_definition.id} for registrant id in request queue id {id}: {e}"
                             )
                             return
-
-                entitlements.append(eee_detail.quantity)
+                registrant_details_list.append(registrant_details)
 
                 _logger.debug(
-                    f"Registrant with id {eee_detail.registrant_id} is entitled for {eee_detail.quantity}"
+                    f"Registrant with id {registrant_details.registrant_id} is entitled for {registrant_details.entitlement_quantity}"
                 )
                 _logger.info(
-                    f"Entitlement processed for registrant_id {eee_detail.registrant_id} for pbms_request_id {eee_detail.pbms_request_id}"
+                    f"Entitlement processed for registrant_id {registrant_details.registrant_id} for pbms_request_id"
                 )
 
+            eee_details.registrant_details = [r.model_dump(mode="json") for r in registrant_details_list]
+
+            eee_details.entitlement_status = StatusEnum.COMPLETE.value
+            eee_session.add(eee_details)
+
             _logger.info(
-                f"Computing and updating entitlement summary statistics for pbms_request_id: {eee_detail.pbms_request_id}"
+                f"Computing and updating entitlement summary statistics for pbms_request_id: {eee_details.pbms_request_id}"
             )
 
             try:
@@ -132,10 +142,13 @@ def entitlement_request_worker(id: int):
                 eee_registry_interface: EEERegistryInterface = (
                     EEERegistryFactory.get_computation_class(target_registry_type)
                 )
+                eee_registry_interface.lock_and_update_summary(
+                    eee_details.number_of_registrants, eee_details.pbms_request_id, eee_session
+                )
 
                 # Compute summary and add to session
                 eee_registry_interface.compute_entitlements_and_modify_summary(
-                    entitlements, g2p_que_eee_request.pbms_request_id, eee_session
+                    eee_details.pbms_request_id, eee_session
                 )
 
                 _logger.info(
@@ -158,7 +171,7 @@ def entitlement_request_worker(id: int):
         except Exception as e:
             error_message = f"Error during processing entitlement request for queue id {id}: {str(e)}"
             _logger.error(error_message)
-
+            raise e
             if g2p_que_eee_request:
                 g2p_que_eee_request.processed_date = datetime.now(timezone.utc)
                 # queue_entry.task_status = StatusEnum.FAILED
