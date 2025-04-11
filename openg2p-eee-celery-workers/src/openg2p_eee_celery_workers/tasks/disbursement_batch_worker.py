@@ -63,10 +63,10 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session):
             header=header,
             message=disbursement_payloads
         )
-        _logger.info(f"Disbursement request payload: {disbursement_request.model_dump(mode='json')}")
+        _logger.debug(f"Disbursement request payload: {disbursement_request.model_dump(mode='json')}")
 
         disbursement_url = _config.g2p_bridge_disbursement_url
-        _logger.info(f"Disbursement URL: {disbursement_url}")
+        _logger.debug(f"Disbursement URL: {disbursement_url}")
 
         response = requests.post(disbursement_url, json=disbursement_request.model_dump(mode='json'))
         response.raise_for_status()
@@ -119,7 +119,7 @@ def disbursement_batch_worker(id: int):
             disbursement_batch.bridge_disbursement_status_attempts += 1
             disbursement_batch.bridge_disbursement_status_latest_timestamp = datetime.now()
             eee_session.commit()
-            _logger.info("DisbursementBatch records created successfully")
+            _logger.info(f"DisbursementBatch records created successfully for cycle id: {id}")
 
         except Exception as e:
             _logger.error(f"Error in disbursement batch worker: {e}")

@@ -72,7 +72,7 @@ def batch_creation_request_worker(id: int):
 
             # Commit the changes to the database
             eee_session.commit()
-            _logger.info("DisbursementBatch records created successfully")
+            _logger.info(f"DisbursementBatch records created successfully for cycle id: {id}")
 
             g2p_disbursement_cycle.batch_creation_status = StatusEnum.COMPLETE.value
             g2p_disbursement_cycle.batch_creation_latest_error_code = None
@@ -82,7 +82,6 @@ def batch_creation_request_worker(id: int):
 
         except Exception as e:
             _logger.error(f"Error in batch creation request worker: {e}")
-            raise e # TODO: Remove this line after testing
             if g2p_disbursement_cycle:
                 g2p_disbursement_cycle.batch_creation_latest_error_code = str(e)
                 g2p_disbursement_cycle.batch_creation_attempts += 1

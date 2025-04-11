@@ -13,3 +13,4 @@ def persist_eee_details(registrant_ids, pbms_request_id, eee_session):
                 "registrant_id": registrant_id,
             },
         )
+
