@@ -42,12 +42,22 @@ def batch_creation_request_worker(id: int):
                 raise Exception(f"No queue entry found for queue id: {id}")
 
             # Get registrants
-            registrant_ids = eee_session.execute(
-                select(EEEDetails.registrant_id).where(
+            # Get all EEEDetails rows for the given pbms_request_id
+            registrant_details = eee_session.execute(
+                select(EEEDetails.registrant_details).where(
                     EEEDetails.pbms_request_id == g2p_disbursement_cycle.pbms_request_id
                 )
-            )
-            registrant_ids: List[str] = registrant_ids.scalars().all()
+            ).scalars().all()
+
+            _logger.info(f"Total batches fetched from EEEDetails: {len(registrant_details)}")
+
+            # Extract registrant_id from each JSON list
+            registrant_ids: List[str] = []
+            for registrant_detail in registrant_details:
+                for registrant in registrant_detail:
+                    registrant_ids.append(registrant["registrant_id"])
+
+            _logger.info(f"Total registrant_ids fetched for disbursement cycle id {id}: {len(registrant_ids)}")
 
             disbursement_batch_size = _config.disbursement_batch_size
 

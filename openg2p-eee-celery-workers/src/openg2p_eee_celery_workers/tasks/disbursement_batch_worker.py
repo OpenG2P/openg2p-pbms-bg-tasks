@@ -26,17 +26,25 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session):
         registrant_ids = disbursement_batch.registrant_ids
         disbursement_payloads = []
 
-        for registrant_id in registrant_ids:
-            result = eee_session.execute(
-                select(EEEDetails).where(
-                    EEEDetails.registrant_id == registrant_id,
-                    EEEDetails.pbms_request_id == disbursement_batch.pbms_request_id
-                )
-            ).first()
-            if not result:
-                raise Exception(f"No registrant details found for id: {registrant_id}")
+        # Fetch all EEEDetails for this request_id
+        eee_details = eee_session.execute(
+            select(EEEDetails).where(
+                EEEDetails.pbms_request_id == disbursement_batch.pbms_request_id
+            )
+        ).scalars().all()
 
-            registrant_details = result[0]
+        # Flatten all registrants
+        registrant_lookup = {}
+        for eee_detail in eee_details:
+            for registrant in eee_detail.registrant_details:
+                registrant_lookup[registrant["registrant_id"]] = registrant
+
+        for registrant_id in registrant_ids:
+            registrant_details = registrant_lookup.get(registrant_id)
+
+            if not registrant_details:
+                raise Exception(f"No registrant details found for registrant_id: {registrant_id}")
+
             header = RequestHeader(
                 version="1.0.0",
                 message_id="string",
@@ -49,12 +57,13 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session):
                 is_msg_encrypted=False,
                 meta="string"
             )
+
             payload = DisbursementPayload(
                 mis_reference_number=disbursement_batch.pbms_request_id,
                 disbursement_envelope_id=disbursement_batch.bridge_envelope_id,
                 beneficiary_id=registrant_id,
                 beneficiary_name="string",
-                disbursement_amount=registrant_details.quantity,
+                disbursement_amount=registrant_details["entitlement_quantity"],
                 narrative="string"
             )
             disbursement_payloads.append(payload)
