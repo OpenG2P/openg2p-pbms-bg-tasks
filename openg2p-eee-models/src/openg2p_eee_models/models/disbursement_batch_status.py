@@ -13,7 +13,7 @@ class DisbursementBatch(BaseORMModel):
     program_id = mapped_column(Integer, nullable=False, index=True)
     bridge_envelope_id = mapped_column(String, nullable=False, index=True)
     pbms_request_id = mapped_column(String, nullable=False, index=True)
-    registrant_ids = mapped_column(JSON, nullable=False)
+    registrant_details = mapped_column(JSON, nullable=False)
     disbursement_status = mapped_column(
         String, nullable=False, default=StatusEnum.PENDING.value
     )

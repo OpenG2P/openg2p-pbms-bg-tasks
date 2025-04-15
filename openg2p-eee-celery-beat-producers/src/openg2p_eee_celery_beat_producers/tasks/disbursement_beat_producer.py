@@ -47,7 +47,7 @@ def disbursement_beat_producer():
                 f"Updating status for Disbursement Batch ID: {batch.id} to PROCESSING"
             )
             eee_session.commit()
-            worker_type = WorkerTypes.DISBURSEMENT_BATCH_WORKER
+            worker_type = WorkerTypes.DISBURSEMENT_WORKER
             # Send task to the appropriate celery worker
             celery_app.send_task(
                 worker_type,

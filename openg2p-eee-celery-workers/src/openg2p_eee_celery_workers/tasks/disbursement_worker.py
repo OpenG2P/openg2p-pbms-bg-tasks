@@ -1,15 +1,18 @@
 import logging
 from datetime import datetime
+from typing import List
 
 import requests
 from openg2p_eee_models.models import Disbursement, DisbursementBatch, EEEDetails
+from openg2p_eee_models.schemas import RegistrantDetails
 from openg2p_g2p_bridge_models.schemas import (
     DisbursementPayload,
     DisbursementRequest,
     DisbursementResponse,
 )
 from openg2p_g2pconnect_common_lib.schemas import RequestHeader
-from openg2p_pbms_models.models import StatusEnum
+from openg2p_pbms_models.models import G2PDisbursementCycle, StatusEnum
+from openg2p_pbms_models.models.program_definiton import G2PProgramDefinition
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -21,31 +24,15 @@ _logger = logging.getLogger(_config.logging_default_logger_name)
 _engine = get_engine()
 
 
-def create_disbursement(disbursement_batch: DisbursementBatch, eee_session):
+def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narrative: str):
     try:
-        registrant_ids = disbursement_batch.registrant_ids
+        registrant_details: List[RegistrantDetails] = disbursement_batch.registrant_details
         disbursement_payloads = []
 
-        # Fetch all EEEDetails for this request_id
-        eee_details = eee_session.execute(
-            select(EEEDetails).where(
-                EEEDetails.pbms_request_id == disbursement_batch.pbms_request_id
-            )
-        ).scalars().all()
+        for registrant in registrant_details:
+            registrant_detail = RegistrantDetails(**registrant)
 
-        # Flatten all registrants
-        registrant_lookup = {}
-        for eee_detail in eee_details:
-            for registrant in eee_detail.registrant_details:
-                registrant_lookup[registrant["registrant_id"]] = registrant
-
-        for registrant_id in registrant_ids:
-            registrant_details = registrant_lookup.get(registrant_id)
-
-            if not registrant_details:
-                raise Exception(f"No registrant details found for registrant_id: {registrant_id}")
-
-            header = RequestHeader(
+            disbursement_header = RequestHeader(
                 version="1.0.0",
                 message_id="string",
                 message_ts="string",
@@ -58,18 +45,18 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session):
                 meta="string"
             )
 
-            payload = DisbursementPayload(
+            disbursement_payload = DisbursementPayload(
                 mis_reference_number=disbursement_batch.pbms_request_id,
                 disbursement_envelope_id=disbursement_batch.bridge_envelope_id,
-                beneficiary_id=registrant_id,
-                beneficiary_name="string",
-                disbursement_amount=registrant_details["entitlement_quantity"],
-                narrative="string"
+                beneficiary_id=registrant_detail.registrant_id,
+                beneficiary_name="Beneficiary Name",
+                disbursement_amount=registrant_detail.entitlement_quantity,
+                narrative=narrative
             )
-            disbursement_payloads.append(payload)
+            disbursement_payloads.append(disbursement_payload)
 
         disbursement_request = DisbursementRequest(
-            header=header,
+            header=disbursement_header,
             message=disbursement_payloads
         )
         _logger.debug(f"Disbursement request payload: {disbursement_request.model_dump(mode='json')}")
@@ -86,15 +73,20 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session):
         _logger.error(f"Error occurred while calling disbursement API: {e}")
         return None, str(e)
 
+def construct_narrative(disbursement_cycle_mnemonic: str, program_mnemonic: str) -> str:
+    return f"{program_mnemonic} - {disbursement_cycle_mnemonic}"
 
-@celery_app.task(name="disbursement_batch_worker")
-def disbursement_batch_worker(id: int):
+@celery_app.task(name="disbursement_worker")
+def disbursement_worker(id: int):
     _logger.info("Starting disbursement batch worker")
     eee_session_maker = sessionmaker(
         bind=_engine.get("db_engine_eee"), expire_on_commit=False
     )
+    pbms_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_pbms"), expire_on_commit=False
+    )
 
-    with eee_session_maker() as eee_session:
+    with pbms_session_maker() as pbms_session, eee_session_maker() as eee_session:
         try:
             disbursement_batch = (
                 eee_session.query(DisbursementBatch)
@@ -104,13 +96,37 @@ def disbursement_batch_worker(id: int):
             if not disbursement_batch:
                 raise Exception(f"No queue entry found for queue id: {id}")
 
+            disbursement_cycle_mnemonic = (
+                pbms_session.query(G2PDisbursementCycle.cycle_mnemonic)
+                .filter(G2PDisbursementCycle.id == disbursement_batch.disbursement_cycle_id)
+                .first()
+            )
+            disbursement_cycle_mnemonic: str = disbursement_cycle_mnemonic[0] if disbursement_cycle_mnemonic else None
+
+            if not disbursement_cycle_mnemonic:
+                raise Exception(f"No disbursement cycle mnemonic found for batch id: {id}")
+
+            program_mnemonic = (
+                pbms_session.query(G2PProgramDefinition.program_mnemonic)
+                .filter(G2PProgramDefinition.id == disbursement_batch.program_id)
+                .first()
+            )
+            program_mnemonic: str = program_mnemonic[0] if program_mnemonic else None
+
+            if not program_mnemonic:
+                raise Exception(f"No program mnemonic found for batch id: {id}")
+
+            narrative: str = construct_narrative(disbursement_cycle_mnemonic, program_mnemonic)
+
             # Call the separated disbursement creation function
-            disbursement_response, error = create_disbursement(disbursement_batch, eee_session)
+            disbursement_response, error = create_disbursement(disbursement_batch, eee_session, narrative)
             if error:
                 raise Exception(f"Error creating disbursement: {error}")
 
             # Save the disbursement response to the database
             for disbursement in disbursement_response.message:
+                _logger.info(f"Disbursement response: {disbursement.model_dump(mode='json')}")
+
                 disbursement_record = Disbursement(
                     bridge_disbursement_id=disbursement.disbursement_id,
                     disbursement_batch_id=disbursement_batch.id,
