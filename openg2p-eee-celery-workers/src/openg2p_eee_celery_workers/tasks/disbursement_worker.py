@@ -125,7 +125,7 @@ def disbursement_worker(id: int):
 
             # Save the disbursement response to the database
             for disbursement in disbursement_response.message:
-                _logger.info(f"Disbursement response: {disbursement.model_dump(mode='json')}")
+                _logger.debug(f"Disbursement response: {disbursement.model_dump(mode='json')}")
 
                 disbursement_record = Disbursement(
                     bridge_disbursement_id=disbursement.disbursement_id,

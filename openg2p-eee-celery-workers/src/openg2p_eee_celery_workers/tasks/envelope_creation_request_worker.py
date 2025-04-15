@@ -163,6 +163,7 @@ def envelope_creation_request_worker(id: int):
                 eee_summary_payload,
                 pbms_session,
             )
+            _logger.debug(f"Disbursement envelope response: {disbursement_envelope_response}")
 
             if error:
                 raise Exception(f"Error occurred while creating envelope: {error}")
