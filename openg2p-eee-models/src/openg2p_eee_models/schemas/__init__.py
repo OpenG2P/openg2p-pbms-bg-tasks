@@ -4,6 +4,7 @@ from .eee_beneficiary_search_request_response import (
     EEEBeneficiarySearchResponse,
     EEEBeneficiarySearchResponsePayload,
 )
+from .eee_registrant_details import RegistrantDetails
 from .eee_summary_request_response import (
     EEESummaryRequest,
     EEESummaryRequestPayload,

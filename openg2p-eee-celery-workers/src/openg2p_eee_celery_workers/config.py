@@ -33,9 +33,7 @@ class Settings(BaseSettings):
     g2p_bridge_envelope_creation_url: str = (
         "http://g2p_bridge_envelope_creation_url"
     )
-    disbursement_batch_size: int = 500
-
-    batch_size: int = 10000
+    disbursement_batch_size: int = 2000
 
     # Authentication parameters
     # auth_url: str = "https://idgenerator.loadtest.openg2p.org/v1/idgenerator/token"

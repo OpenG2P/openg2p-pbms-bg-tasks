@@ -1,15 +1,8 @@
-import enum
-
 from openg2p_fastapi_common.models import BaseORMModel
 from sqlalchemy import JSON, DateTime, Integer, String
 from sqlalchemy.orm import mapped_column
 
-
-class StatusEnum(enum.Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETE = "complete"
-    NOT_APPLICABLE = "not_applicable"
+from .status_enum import StatusEnum
 
 
 class DisbursementBatch(BaseORMModel):
@@ -20,7 +13,7 @@ class DisbursementBatch(BaseORMModel):
     program_id = mapped_column(Integer, nullable=False, index=True)
     bridge_envelope_id = mapped_column(String, nullable=False, index=True)
     pbms_request_id = mapped_column(String, nullable=False, index=True)
-    registrant_ids = mapped_column(JSON, nullable=False)
+    registrant_details = mapped_column(JSON, nullable=False)
     disbursement_status = mapped_column(
         String, nullable=False, default=StatusEnum.PENDING.value
     )

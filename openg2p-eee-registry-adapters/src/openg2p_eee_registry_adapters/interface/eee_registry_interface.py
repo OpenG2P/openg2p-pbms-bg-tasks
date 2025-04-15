@@ -17,6 +17,14 @@ class EEERegistryInterface(ABC):
     """
 
     @abstractmethod
+    def lock_and_update_summary(
+        self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
+    ) -> None:
+        raise NotImplementedError(
+            "Subclasses must implement lock_and_update_summary()"
+        )
+
+    @abstractmethod
     async def get_summary(
         self, pbms_request_id: str, eee_session: Session
     ) -> EEESummaryPayload:
@@ -39,7 +47,7 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def compute_entitlements_and_modify_summary(
-        self, entitlements: List[float], pbms_request_id: str, eee_session: Session
+        self, pbms_request_id: str, eee_session: Session
     ):
         # Abstract method to compute entitlements fields and modify summary
         raise NotImplementedError(
@@ -63,7 +71,7 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def compute_and_persist_summary(
-        self, base_summary, sr_session: Session, eee_session: Session
+        self, eee_details: List[dict], base_summary, sr_session: Session, eee_session: Session
     ):
         # Abstract method to compute summary statistics
         raise NotImplementedError("Subclasses must implement compute_summary()")

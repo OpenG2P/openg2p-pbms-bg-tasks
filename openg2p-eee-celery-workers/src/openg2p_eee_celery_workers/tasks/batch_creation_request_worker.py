@@ -41,31 +41,23 @@ def batch_creation_request_worker(id: int):
             if not g2p_disbursement_cycle:
                 raise Exception(f"No queue entry found for queue id: {id}")
 
-            # Get registrants
-            registrant_ids = eee_session.execute(
-                select(EEEDetails.registrant_id).where(
+            # Get all EEEDetails rows for the given pbms_request_id
+            eee_details = eee_session.execute(
+                select(EEEDetails).where(
                     EEEDetails.pbms_request_id == g2p_disbursement_cycle.pbms_request_id
                 )
-            )
-            registrant_ids: List[str] = registrant_ids.scalars().all()
+            ).scalars().all()
 
-            disbursement_batch_size = _config.disbursement_batch_size
+            _logger.info(f"Total batches fetched from EEEDetails: {len(eee_details)}")
 
-            # Divide registrant_ids into batches
-            batches = [
-                registrant_ids[i : i + disbursement_batch_size]
-                for i in range(0, len(registrant_ids), disbursement_batch_size)
-            ]
-            _logger.info(f"Total batches created: {len(batches)}")
-
-            for batch in batches:
+            for eee_detail in eee_details:
                 # Create DisbursementBatch records
                 disbursement_batch = DisbursementBatch(
                     disbursement_cycle_id=g2p_disbursement_cycle.id,
                     program_id=g2p_disbursement_cycle.program_id,
                     bridge_envelope_id=g2p_disbursement_cycle.bridge_envelope_id,
                     pbms_request_id=g2p_disbursement_cycle.pbms_request_id,
-                    registrant_ids=batch,
+                    registrant_details=eee_detail.registrant_details,
                     disbursement_status=StatusEnum.PENDING.value,
                 )
                 eee_session.add(disbursement_batch)

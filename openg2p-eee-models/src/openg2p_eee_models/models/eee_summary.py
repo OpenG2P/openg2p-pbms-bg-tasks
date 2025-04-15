@@ -14,6 +14,7 @@ class EEESummary(BaseORMModel):
     target_registry_type = mapped_column(String, nullable=False)
     pbms_request_id = mapped_column(String, index=True, unique=True, nullable=False)
     number_of_registrants = mapped_column(Integer, nullable=False)
+    number_of_entitlements_processed = mapped_column(Integer, nullable=False, default=0)
 
     total_entitlement_amount = mapped_column(Float, nullable=True)
     average_entitlement_per_person = mapped_column(Float, nullable=True)
