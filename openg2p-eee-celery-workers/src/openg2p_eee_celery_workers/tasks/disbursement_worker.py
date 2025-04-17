@@ -1,11 +1,9 @@
-import hashlib
 import logging
 from datetime import datetime, timedelta
 from typing import List
 
 import requests
-from jose import jwt
-from openg2p_eee_models.models import Disbursement, DisbursementBatch, EEEDetails
+from openg2p_eee_models.models import Disbursement, DisbursementBatch
 from openg2p_eee_models.schemas import RegistrantDetails
 from openg2p_g2p_bridge_models.schemas import (
     DisbursementPayload,
@@ -15,7 +13,6 @@ from openg2p_g2p_bridge_models.schemas import (
 from openg2p_g2pconnect_common_lib.schemas import RequestHeader
 from openg2p_pbms_models.models import G2PDisbursementCycle, StatusEnum
 from openg2p_pbms_models.models.program_definiton import G2PProgramDefinition
-from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine

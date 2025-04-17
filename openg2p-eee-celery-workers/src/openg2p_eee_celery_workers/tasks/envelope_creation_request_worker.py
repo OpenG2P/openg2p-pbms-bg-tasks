@@ -3,7 +3,6 @@ import logging
 from datetime import datetime, timedelta
 
 import requests
-from jose import jwt
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
 from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_eee_registry_adapters.schema import EEESummaryPayload

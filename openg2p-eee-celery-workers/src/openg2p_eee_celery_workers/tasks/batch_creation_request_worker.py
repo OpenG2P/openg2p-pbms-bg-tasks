@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from typing import List
 
 from openg2p_eee_models.models import DisbursementBatch, EEEDetails
 from openg2p_pbms_models.models import (
