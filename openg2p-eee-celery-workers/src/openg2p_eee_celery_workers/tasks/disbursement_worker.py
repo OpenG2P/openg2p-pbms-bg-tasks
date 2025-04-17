@@ -1,9 +1,9 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 import requests
-from openg2p_eee_models.models import Disbursement, DisbursementBatch, EEEDetails
+from openg2p_eee_models.models import Disbursement, DisbursementBatch
 from openg2p_eee_models.schemas import RegistrantDetails
 from openg2p_g2p_bridge_models.schemas import (
     DisbursementPayload,
@@ -13,11 +13,11 @@ from openg2p_g2p_bridge_models.schemas import (
 from openg2p_g2pconnect_common_lib.schemas import RequestHeader
 from openg2p_pbms_models.models import G2PDisbursementCycle, StatusEnum
 from openg2p_pbms_models.models.program_definiton import G2PProgramDefinition
-from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
+from ..helpers import create_jwt_token
 
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
@@ -32,19 +32,6 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narr
         for registrant in registrant_details:
             registrant_detail = RegistrantDetails(**registrant)
 
-            disbursement_header = RequestHeader(
-                version="1.0.0",
-                message_id="string",
-                message_ts="string",
-                action="string",
-                sender_id="string",
-                sender_uri="",
-                receiver_id="",
-                total_count=0,
-                is_msg_encrypted=False,
-                meta="string"
-            )
-
             disbursement_payload = DisbursementPayload(
                 mis_reference_number=disbursement_batch.pbms_request_id,
                 disbursement_envelope_id=disbursement_batch.bridge_envelope_id,
@@ -55,18 +42,57 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narr
             )
             disbursement_payloads.append(disbursement_payload)
 
+        disbursement_header = RequestHeader(
+            version="1.0.0",
+            message_id="string",
+            message_ts="string",
+            action="create_disbursements",
+            sender_id=_config.sender_id,
+            sender_uri="",
+            receiver_id="",
+            total_count=len(registrant_details),
+            is_msg_encrypted=False,
+            meta="string"
+        )
+
         disbursement_request = DisbursementRequest(
             header=disbursement_header,
             message=disbursement_payloads
         )
-        _logger.debug(f"Disbursement request payload: {disbursement_request.model_dump(mode='json')}")
+        disbursement_request_json = disbursement_request.model_dump(mode='json')
+        disbursement_request_json.update(
+            {
+                "iss": _config.issuer,
+                "aud": _config.audience,
+                "iat": datetime.now(),
+                "exp": datetime.now() + timedelta(minutes=5),
+            }
+        )
+        _logger.debug(f"Disbursement request payload: {disbursement_request_json}")
 
         disbursement_url = _config.g2p_bridge_disbursement_url
         _logger.debug(f"Disbursement URL: {disbursement_url}")
 
-        response = requests.post(disbursement_url, json=disbursement_request.model_dump(mode='json'))
+        jwt_token = create_jwt_token(disbursement_request_json, _config.private_key)
+
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": jwt_token,
+        }
+        _logger.info(f"Calling disbursement creation endpoint for disbursement batch id {disbursement_batch.id} having {len(registrant_details)} beneficiaries")
+
+        response = requests.post(
+            disbursement_url,
+            json=disbursement_request_json,
+            headers=headers
+        )
         response.raise_for_status()
+        _logger.info(f"Response status code for disbursement batch id {disbursement_batch.id}: {response.status_code}")
+
         disbursement_response = DisbursementResponse.model_validate(response.json())
+        _logger.debug(f"Response for disbursement batch id {disbursement_batch.id}: {disbursement_response}")
+
         return disbursement_response, None
 
     except Exception as e:

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
@@ -23,6 +23,7 @@ from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
+from ..helpers import create_jwt_token
 
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
@@ -54,13 +55,12 @@ def create_disbursement_envelope(
         disbursement_currency_code=delivery_code.measurement_unit,  # TODO Add a separate unit for currency ISO
     )
 
-    # TODO: Refactor later
     disbursement_envelope_request_header = RequestHeader(
         version="1.0.0",
         message_id="string",
         message_ts="string",
-        action="string",
-        sender_id="string",
+        action="create_disbursement_envelope",
+        sender_id=_config.sender_id,
         sender_uri="",
         receiver_id="",
         total_count=1,
@@ -73,18 +73,41 @@ def create_disbursement_envelope(
             message=envelope_payload
         )
     )
-    _logger.debug(f"Disbursement Envelope Request: {disbursement_envelope_request.model_dump(mode='json')}")
+    disbursement_envelope_request_json = disbursement_envelope_request.model_dump(mode='json')
+    disbursement_envelope_request_json.update(
+        {
+            "iss": _config.issuer,
+            "aud": _config.audience,
+            "iat": datetime.now(),
+            "exp": datetime.now() + timedelta(minutes=5),
+        }
+    )
+    _logger.debug(f"Disbursement Envelope Request: {disbursement_envelope_request_json}")
 
     envelope_creation_url = _config.g2p_bridge_envelope_creation_url
     _logger.debug(f"Envelope Creation URL: {envelope_creation_url}")
 
+    jwt_token = create_jwt_token(disbursement_envelope_request_json, _config.private_key)
+
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": jwt_token,
+    }
+
+    _logger.info(f"Calling envelope creation endpoint for disbursement cycle id {disbursement_cycle.id}")
     try:
         response = requests.post(
-            envelope_creation_url, json=disbursement_envelope_request.model_dump(mode='json')
+            envelope_creation_url,
+            json=disbursement_envelope_request_json,
+            headers=headers
         )
         response.raise_for_status()
+        _logger.info(f"Response status code for disbursement cycle id {disbursement_cycle.id}: {response.status_code}")
 
         envelope_response = DisbursementEnvelopeResponse.model_validate(response.json())
+        _logger.debug(f"Response for disbursement cycle id {disbursement_cycle.id}: {envelope_response}")
+
         return envelope_response, None
 
     except Exception as e:

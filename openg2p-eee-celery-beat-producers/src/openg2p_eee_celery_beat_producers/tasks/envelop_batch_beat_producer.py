@@ -1,14 +1,13 @@
 import logging
 from typing import List
 
-from .worker_types import WorkerTypes
-
 from openg2p_pbms_models.models import G2PDisbursementCycle, StatusEnum
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
+from .worker_types import WorkerTypes
 
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
