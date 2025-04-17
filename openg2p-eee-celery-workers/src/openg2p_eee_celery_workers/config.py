@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     )
     disbursement_batch_size: int = 2000
 
+    # JWT parameters
+    issuer: str = "issuer"
+    audience: str = "audience"
+    private_key : str = "private_key"
+    sender_id : str = "sender_id"
+
     # Authentication parameters
     # auth_url: str = "https://idgenerator.loadtest.openg2p.org/v1/idgenerator/token"
     # auth_client_id: str = "idgenerator"
