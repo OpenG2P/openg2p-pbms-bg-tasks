@@ -41,9 +41,7 @@ def envelop_batch_beat_producer():
             .scalars()
             .all()
         )
-        _logger.debug(
-            f"Found {len(g2p_disbursement_cycles)} pending cycle requests"
-        )
+        _logger.debug(f"Found {len(g2p_disbursement_cycles)} pending cycle requests")
 
         for g2p_disbursement_cycle in g2p_disbursement_cycles:
             _logger.info(f"Queueing Disbursement Cycle ID: {g2p_disbursement_cycle.id}")

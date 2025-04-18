@@ -26,19 +26,15 @@ def eee_eligibility_beat_producer():
             pbms_session.execute(
                 select(G2PQueEEERequest)
                 .filter(
-                    (
-                        G2PQueEEERequest.eligibility_process_status
-                        == StatusEnum.PENDING.value
-                    )
+                    G2PQueEEERequest.eligibility_process_status
+                    == StatusEnum.PENDING.value
                 )
                 .limit(_config.batch_size)
             )
             .scalars()
             .all()
         )
-        _logger.info(
-            f"Found {len(que_eee_requests)} pending eligibility requests"
-        )
+        _logger.info(f"Found {len(que_eee_requests)} pending eligibility requests")
 
         for que_eee_request in que_eee_requests:
             _logger.info(f"Queueing EEE eligibility request ID: {que_eee_request.id}")

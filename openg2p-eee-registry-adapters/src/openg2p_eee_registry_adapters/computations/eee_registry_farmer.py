@@ -30,11 +30,9 @@ class EEERegistryFarmer(EEERegistryInterface):
     async def get_summary(
         self, pbms_request_id: str, eee_session: AsyncSession
     ) -> EEESummaryFarmerPayload:
-        eligibility_summary_farmer = await (
-            eee_session.execute(
-                select(EEESummaryFarmer).where(
-                    EEESummaryFarmer.pbms_request_id == pbms_request_id
-                )
+        eligibility_summary_farmer = await eee_session.execute(
+            select(EEESummaryFarmer).where(
+                EEESummaryFarmer.pbms_request_id == pbms_request_id
             )
         )
         eligibility_summary_farmer = eligibility_summary_farmer.scalars().first()
@@ -90,11 +88,9 @@ class EEERegistryFarmer(EEERegistryInterface):
         page_size=10,
         order_by="id asc",
     ) -> EEEBeneficiarySearchResponsePayload:
-        registrant_ids = await (
-            eee_session.execute(
-                select(EEEDetails.registrant_id).where(
-                    EEEDetails.pbms_request_id == pbms_request_id
-                )
+        registrant_ids = await eee_session.execute(
+            select(EEEDetails.registrant_id).where(
+                EEEDetails.pbms_request_id == pbms_request_id
             )
         )
         registrant_ids: List[str] = registrant_ids.scalars().all()
@@ -170,7 +166,11 @@ class EEERegistryFarmer(EEERegistryInterface):
     # Eligibility Celery Worker Methods
     # =================================
     def compute_and_persist_summary(
-        self, eee_details: List[dict], base_summary, sr_session: Session, eee_session: Session
+        self,
+        eee_details: List[dict],
+        base_summary,
+        sr_session: Session,
+        eee_session: Session,
     ):
         land_areas = []
 
@@ -222,7 +222,12 @@ class EEERegistryFarmer(EEERegistryInterface):
         self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
     ) -> None:
         try:
-            summary_farmer = eee_session.query(EEESummaryFarmer).filter_by(pbms_request_id = pbms_request_id).with_for_update().one()
+            summary_farmer = (
+                eee_session.query(EEESummaryFarmer)
+                .filter_by(pbms_request_id=pbms_request_id)
+                .with_for_update()
+                .one()
+            )
             summary_farmer.number_of_entitlements_processed += number_of_registrants
             eee_session.commit()
         except Exception as e:
@@ -244,12 +249,23 @@ class EEERegistryFarmer(EEERegistryInterface):
     def compute_entitlements_and_modify_summary(
         self, pbms_request_id: str, eee_session: Session
     ):
-        summary_farmer = eee_session.query(EEESummaryFarmer).filter_by(pbms_request_id = pbms_request_id).first()
+        summary_farmer = (
+            eee_session.query(EEESummaryFarmer)
+            .filter_by(pbms_request_id=pbms_request_id)
+            .first()
+        )
 
-        if summary_farmer.number_of_entitlements_processed != summary_farmer.number_of_registrants:
+        if (
+            summary_farmer.number_of_entitlements_processed
+            != summary_farmer.number_of_registrants
+        ):
             return
 
-        eee_details = eee_session.query(EEEDetails).filter_by(pbms_request_id = pbms_request_id).all()
+        eee_details = (
+            eee_session.query(EEEDetails)
+            .filter_by(pbms_request_id=pbms_request_id)
+            .all()
+        )
 
         entitlements = []
 

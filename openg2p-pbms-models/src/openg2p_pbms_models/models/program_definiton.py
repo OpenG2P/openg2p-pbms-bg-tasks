@@ -1,6 +1,11 @@
-from sqlalchemy import Float, Integer, String, Enum as SqlEnum
-from sqlalchemy.orm import mapped_column
 from enum import Enum
+
+from sqlalchemy import Enum as SqlEnum
+from sqlalchemy import Float, Integer, String
+from sqlalchemy.orm import mapped_column
+
+from .base import BaseORMModel
+
 
 class DisbursementFrequency(Enum):
     Daily = "Daily"
@@ -14,9 +19,6 @@ class DisbursementFrequency(Enum):
     OnDemand = "OnDemand"
 
 
-from .base import BaseORMModel
-
-
 class G2PProgramDefinition(BaseORMModel):
     __tablename__ = "g2p_program_definition"
 
@@ -28,5 +30,7 @@ class G2PProgramDefinition(BaseORMModel):
     program_status = mapped_column(String, nullable=False)
     max_quantity = mapped_column(Float, nullable=True)
     disbursement_frequency = mapped_column(
-        SqlEnum(DisbursementFrequency), nullable=True, default=DisbursementFrequency.OnDemand
+        SqlEnum(DisbursementFrequency),
+        nullable=True,
+        default=DisbursementFrequency.OnDemand,
     )

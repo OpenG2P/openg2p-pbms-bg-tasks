@@ -12,4 +12,6 @@ class EEEDetails(BaseORMModel):
     pbms_request_id = mapped_column(String, nullable=False)
     registrant_details = mapped_column(JSON, nullable=False)
     number_of_registrants = mapped_column(Integer, nullable=False)
-    entitlement_status = mapped_column(String, nullable=False, default=StatusEnum.PENDING.value)
+    entitlement_status = mapped_column(
+        String, nullable=False, default=StatusEnum.PENDING.value
+    )

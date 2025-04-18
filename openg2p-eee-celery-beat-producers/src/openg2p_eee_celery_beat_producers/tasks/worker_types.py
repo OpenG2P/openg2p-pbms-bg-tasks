@@ -8,5 +8,3 @@ class WorkerTypes:
     ELIGIBILITY_REQUEST_WORKER = "eligibility_request_worker"
     ENTITLEMENT_REQUEST_WORKER = "entitlement_request_worker"
     ENVELOPE_CREATION_REQUEST_WORKER = "envelope_creation_request_worker"
-
-   

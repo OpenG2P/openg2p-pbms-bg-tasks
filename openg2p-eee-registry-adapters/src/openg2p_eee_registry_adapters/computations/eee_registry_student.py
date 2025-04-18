@@ -36,11 +36,9 @@ class EEERegistryStudent(EEERegistryInterface):
     ) -> EEESummaryStudentPayload:
         _logger.info(f"Fetching summary for pbms_request_id: {pbms_request_id}")
         _logger.info(f"Type of session: {(eee_session)}")
-        eligibility_summary_student = await (
-            eee_session.execute(
-                select(EEESummaryStudent).where(
-                    EEESummaryStudent.pbms_request_id == pbms_request_id
-                )
+        eligibility_summary_student = await eee_session.execute(
+            select(EEESummaryStudent).where(
+                EEESummaryStudent.pbms_request_id == pbms_request_id
             )
         )
         eligibility_summary_student = eligibility_summary_student.scalars().first()
@@ -168,7 +166,11 @@ class EEERegistryStudent(EEERegistryInterface):
     # Eligibility Celery Worker Methods
     # =================================
     def compute_and_persist_summary(
-        self, eee_details: List[dict], base_summary, sr_session: Session, eee_session: Session
+        self,
+        eee_details: List[dict],
+        base_summary,
+        sr_session: Session,
+        eee_session: Session,
     ):
         students_age = []
 
@@ -229,7 +231,12 @@ class EEERegistryStudent(EEERegistryInterface):
         self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
     ) -> None:
         try:
-            summary_student = eee_session.query(EEESummaryStudent).filter_by(pbms_request_id = pbms_request_id).with_for_update().one()
+            summary_student = (
+                eee_session.query(EEESummaryStudent)
+                .filter_by(pbms_request_id=pbms_request_id)
+                .with_for_update()
+                .one()
+            )
             summary_student.number_of_entitlements_processed += number_of_registrants
             eee_session.commit()
         except Exception as e:
@@ -251,12 +258,23 @@ class EEERegistryStudent(EEERegistryInterface):
     def compute_entitlements_and_modify_summary(
         self, pbms_request_id: str, eee_session: Session
     ):
-        summary_student = eee_session.query(EEESummaryStudent).filter_by(pbms_request_id = pbms_request_id).first()
+        summary_student = (
+            eee_session.query(EEESummaryStudent)
+            .filter_by(pbms_request_id=pbms_request_id)
+            .first()
+        )
 
-        if summary_student.number_of_entitlements_processed != summary_student.number_of_registrants:
+        if (
+            summary_student.number_of_entitlements_processed
+            != summary_student.number_of_registrants
+        ):
             return
 
-        eee_details = eee_session.query(EEEDetails).filter_by(pbms_request_id = pbms_request_id).all()
+        eee_details = (
+            eee_session.query(EEEDetails)
+            .filter_by(pbms_request_id=pbms_request_id)
+            .all()
+        )
 
         entitlements = []
 
