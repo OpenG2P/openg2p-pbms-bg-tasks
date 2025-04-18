@@ -22,11 +22,24 @@ class Settings(BaseSettings):
         "postgresql://postgres:postgres@localhost:5432/socialregistrydb"
     )
     db_datasource_pbms: str = "postgresql://postgres:postgres@localhost:5432/pbmsdb"
+    db_datasource_eee_async: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/eeedb"
 
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"
 
-    batch_size: int = 10000
+    g2p_bridge_disbursement_url: str = (
+        "http://g2p_bridge_disbursement_url"
+    )
+    g2p_bridge_envelope_creation_url: str = (
+        "http://g2p_bridge_envelope_creation_url"
+    )
+    disbursement_batch_size: int = 2000
+
+    # JWT parameters
+    issuer: str = "issuer"
+    audience: str = "audience"
+    private_key : str = "private_key"
+    sender_id : str = "sender_id"
 
     # Authentication parameters
     # auth_url: str = "https://idgenerator.loadtest.openg2p.org/v1/idgenerator/token"

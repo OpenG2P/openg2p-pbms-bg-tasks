@@ -1,14 +1,16 @@
+import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from openg2p_eee_models.models import EEESummary
+from openg2p_eee_models.schemas import RegistrantDetails
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
 from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_pbms_models.models import (
-    EnumStatus,
     G2PEligibilityRuleDefinition,
     G2PProgramDefinition,
     G2PQueEEERequest,
+    StatusEnum,
 )
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
@@ -76,22 +78,39 @@ def eligibility_request_worker(id: int):
                 f"Constructed eligibility list generation sql query for queue id {id} is: {constructed_query}"
             )
 
-            registrant_ids = []
+            total_number_of_registrants = 0
+            eee_details = []
             cursor = sr_session.execute(constructed_query)
             while True:
-                batch = cursor.fetchmany(_config.batch_size)
+                number_of_registrants_for_batch = 0
+                batch = cursor.fetchmany(_config.disbursement_batch_size)
+                registrant_details = []
                 if not batch:
                     break
                 for row in batch:
-                    registrant_ids.extend(row)
+                    number_of_registrants_for_batch += 1
+                    registrant_details.append(RegistrantDetails(
+                        registrant_id=row[0],
+                        entitlement_quantity=0,
+                    ).model_dump(mode="json"))
 
-            _logger.debug(
-                f"Count of registrant IDs for queue id {id} are: {len(registrant_ids)}"
+                total_number_of_registrants += number_of_registrants_for_batch
+                eee_details.append(
+                    {
+                        "pbms_request_id": g2p_que_eee_request.pbms_request_id,
+                        "registrant_details": json.dumps(registrant_details),
+                        "entitlement_status": StatusEnum.PENDING.value,
+                        "number_of_registrants": number_of_registrants_for_batch,
+                    }
+                )
+
+            _logger.info(f"Adding eligibility details for queue id: {id}")
+            persist_eee_details(
+                eee_details, eee_session
             )
 
-            _logger.info(f"Adding eligibility details table for queue id: {id}")
-            persist_eee_details(
-                registrant_ids, g2p_que_eee_request.pbms_request_id, eee_session
+            _logger.debug(
+                f"Count of registrant IDs for queue id {id} are: {total_number_of_registrants}"
             )
 
             _logger.info(f"Computing and adding summary statistics for queue id: {id}")
@@ -102,8 +121,8 @@ def eligibility_request_worker(id: int):
                 program_mnemonic=g2p_program_definition.program_mnemonic,
                 target_registry_type=g2p_program_definition.target_registry_type,
                 pbms_request_id=g2p_que_eee_request.pbms_request_id,
-                number_of_registrants=len(registrant_ids),
-                date_created=datetime.utcnow(),
+                number_of_registrants=total_number_of_registrants,
+                date_created=datetime.now(timezone.utc),
             )
             _logger.debug(f"Base summary for queue id {id} is: {base_summary}")
 
@@ -117,7 +136,7 @@ def eligibility_request_worker(id: int):
 
                 # Compute summary and add to session
                 summary_computation_interface.compute_and_persist_summary(
-                    registrant_ids, base_summary, sr_session, eee_session
+                    eee_details, base_summary, sr_session, eee_session
                 )
 
                 _logger.info(
@@ -137,9 +156,9 @@ def eligibility_request_worker(id: int):
                 return
 
             # Update eligibility request queue entry status
-            g2p_que_eee_request.eligibility_process_status = EnumStatus.COMPLETE.value
-            g2p_que_eee_request.entitlement_process_status = EnumStatus.PENDING.value
-            g2p_que_eee_request.processed_date = datetime.utcnow()
+            g2p_que_eee_request.eligibility_process_status = StatusEnum.COMPLETE.value
+            g2p_que_eee_request.entitlement_process_status = StatusEnum.PENDING.value
+            g2p_que_eee_request.processed_date = datetime.now(timezone.utc)
 
             eee_session.commit()
             pbms_session.commit()
@@ -149,8 +168,8 @@ def eligibility_request_worker(id: int):
             _logger.error(error_message)
 
             if g2p_que_eee_request:
-                g2p_que_eee_request.processed_date = datetime.utcnow()
-                # queue_entry.task_status = EnumStatus.FAILED
+                g2p_que_eee_request.processed_date = datetime.now(timezone.utc)
+                # queue_entry.task_status = StatusEnum.FAILED
                 pbms_session.commit()
 
         _logger.info(f"Completed processing eligibility request for queue id: {id}")

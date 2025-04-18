@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from .eee_summary import EEESummaryPayload
 
 
-class EligibilitySummaryFarmerPayload(BaseModel):
+class RegistrySummaryFarmerPayload(BaseModel):
     land_holding_mean: Optional[float]
     land_holding_quartile_25: Optional[float]
     land_holding_quartile_50: Optional[float]
@@ -14,11 +14,6 @@ class EligibilitySummaryFarmerPayload(BaseModel):
     annual_income_quartile_25: Optional[float]
     annual_income_quartile_50: Optional[float]
     annual_income_quartile_75: Optional[float]
-
-
-class EntitlementSummaryFarmerPayload(BaseModel):
-    total_entitlement_amount: Optional[float] = None
-    average_entitlement_per_person: Optional[float] = None
     average_entitlement_female: Optional[float] = None
     average_entitlement_male: Optional[float] = None
     entitlement_amount_q1: Optional[float] = None
@@ -33,5 +28,4 @@ class EntitlementSummaryFarmerPayload(BaseModel):
 
 
 class EEESummaryFarmerPayload(EEESummaryPayload):
-    eligibility_summary: EligibilitySummaryFarmerPayload
-    entitlement_summary: EntitlementSummaryFarmerPayload
+    registry_summary: RegistrySummaryFarmerPayload

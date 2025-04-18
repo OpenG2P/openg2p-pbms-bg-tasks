@@ -17,6 +17,14 @@ class EEERegistryInterface(ABC):
     """
 
     @abstractmethod
+    def lock_and_update_summary(
+        self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
+    ) -> None:
+        raise NotImplementedError(
+            "Subclasses must implement lock_and_update_summary()"
+        )
+
+    @abstractmethod
     async def get_summary(
         self, pbms_request_id: str, eee_session: Session
     ) -> EEESummaryPayload:
@@ -30,7 +38,7 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def get_is_registant_entitled(
-        self, registrant_id: int, sql_query: str, sr_session: Session
+        self, registrant_id: str, sql_query: str, sr_session: Session
     ) -> bool:
         # Abstract method to check if registrant is entitled
         raise NotImplementedError(
@@ -39,7 +47,7 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def compute_entitlements_and_modify_summary(
-        self, entitlements: List[float], pbms_request_id: str, eee_session: Session
+        self, pbms_request_id: str, eee_session: Session
     ):
         # Abstract method to compute entitlements fields and modify summary
         raise NotImplementedError(
@@ -63,7 +71,7 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def compute_and_persist_summary(
-        self, base_summary, sr_session: Session, eee_session: Session
+        self, eee_details: List[dict], base_summary, sr_session: Session, eee_session: Session
     ):
         # Abstract method to compute summary statistics
         raise NotImplementedError("Subclasses must implement compute_summary()")
@@ -74,7 +82,7 @@ class EEERegistryInterface(ABC):
     # TODO: Implement batching in beneficiary search query builders
     def construct_beneficiary_search_sql_query(
         self,
-        registrant_ids: List[int],
+        registrant_ids: List[str],
         target_registry_type: str,
         where_clause: str,
         order_by: str,
@@ -97,7 +105,7 @@ class EEERegistryInterface(ABC):
         sql_query = text(
             f"""
             SELECT * FROM {table_name}
-            WHERE id IN ({registrant_placeholders}) {where_clause_sql}
+            WHERE unique_id IN ({registrant_placeholders}) {where_clause_sql}
             ORDER BY {order_by}
             OFFSET :offset
             LIMIT :limit
@@ -112,7 +120,7 @@ class EEERegistryInterface(ABC):
         return sql_query, params
 
     def construct_beneficiary_search_count_sql_query(
-        self, registrant_ids: List[int], target_registry_type: str, where_clause: str
+        self, registrant_ids: List[str], target_registry_type: str, where_clause: str
     ) -> Tuple[TextClause, Dict[str, Any]]:
         if not registrant_ids:
             return None, {}
@@ -130,7 +138,7 @@ class EEERegistryInterface(ABC):
         sql_query = text(
             f"""
             SELECT COUNT(*) FROM {table_name}
-            WHERE id IN ({registrant_placeholders}) {where_clause_sql}
+            WHERE unique_id IN ({registrant_placeholders}) {where_clause_sql}
         """
         )
 
@@ -141,7 +149,7 @@ class EEERegistryInterface(ABC):
         return sql_query, params
 
     def construct_get_is_registrant_entitled_sql_query(
-        self, registrant_id: int, target_registry_type: str, sql_query: str
+        self, registrant_id: str, target_registry_type: str, sql_query: str
     ) -> TextClause:
         sql_query = sql_query.strip()
 
@@ -151,10 +159,10 @@ class EEERegistryInterface(ABC):
             raise ValueError("Invalid SQL query: Must be a valid SELECT statement")
 
         if "WHERE" in sql_query.upper():
-            sql_query += f" AND g2p_{target_registry_type}_registry.id = :registrant_id"
+            sql_query += f" AND g2p_{target_registry_type}_registry.unique_id = :registrant_id"
         else:
             sql_query += (
-                f" WHERE g2p_{target_registry_type}_registry.id = :registrant_id"
+                f" WHERE g2p_{target_registry_type}_registry.unique_id = :registrant_id"
             )
 
         params = {"registrant_id": registrant_id}

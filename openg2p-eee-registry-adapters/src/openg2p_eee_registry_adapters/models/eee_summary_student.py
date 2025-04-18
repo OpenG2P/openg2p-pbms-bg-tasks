@@ -4,7 +4,7 @@ from sqlalchemy.orm import mapped_column
 
 
 class EEESummaryStudent(EEESummary):
-    __tablename__ = "g2p_eee_summary_student"
+    __tablename__ = "eee_summary_student"
 
     age_mean = mapped_column(Float, nullable=True)
     age_quartile_25 = mapped_column(Float, nullable=True)

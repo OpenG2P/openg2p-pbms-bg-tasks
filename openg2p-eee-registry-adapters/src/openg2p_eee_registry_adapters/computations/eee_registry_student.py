@@ -1,3 +1,5 @@
+import json
+import logging
 from datetime import date
 from typing import List
 
@@ -14,11 +16,13 @@ from ..cache import beneficiary_count_key_builder
 from ..interface import EEERegistryInterface
 from ..models import EEESummaryStudent, G2PStudentRegistry
 from ..schema import (
+    EEEGeneralSummary,
     EEESummaryStudentPayload,
-    EligibilitySummaryStudentPayload,
-    EntitlementSummaryStudentPayload,
     G2PStudentRegistryPayload,
+    RegistrySummaryStudentPayload,
 )
+
+_logger = logging.getLogger("openg2p_eee_registry_adapters")
 
 
 class EEERegistryStudent(EEERegistryInterface):
@@ -28,37 +32,36 @@ class EEERegistryStudent(EEERegistryInterface):
     # Summary API Methods
     # ===================
     async def get_summary(
-        self, request_id: int, eee_session: Session
+        self, pbms_request_id: int, eee_session: AsyncSession
     ) -> EEESummaryStudentPayload:
-        eligibility_summary_student = (
-            (
-                await eee_session.execute(
-                    select(EEESummaryStudent).where(
-                        EEESummaryStudent.pbms_request_id == request_id
-                    )
+        _logger.info(f"Fetching summary for pbms_request_id: {pbms_request_id}")
+        _logger.info(f"Type of session: {(eee_session)}")
+        eligibility_summary_student = await (
+            eee_session.execute(
+                select(EEESummaryStudent).where(
+                    EEESummaryStudent.pbms_request_id == pbms_request_id
                 )
             )
-            .scalars()
-            .first()
         )
+        eligibility_summary_student = eligibility_summary_student.scalars().first()
 
         summary = EEESummaryStudentPayload(
-            id=eligibility_summary_student.id,
-            program_id=eligibility_summary_student.program_id,
-            program_mnemonic=eligibility_summary_student.program_mnemonic,
-            target_registry_type=eligibility_summary_student.target_registry_type,
-            pbms_request_id=eligibility_summary_student.pbms_request_id,
-            number_of_registrants=eligibility_summary_student.number_of_registrants,
-            date_created=eligibility_summary_student.date_created,
-            eligibility_summary=EligibilitySummaryStudentPayload(
+            general_summary=EEEGeneralSummary(
+                id=eligibility_summary_student.id,
+                program_id=eligibility_summary_student.program_id,
+                program_mnemonic=eligibility_summary_student.program_mnemonic,
+                target_registry_type=eligibility_summary_student.target_registry_type,
+                pbms_request_id=eligibility_summary_student.pbms_request_id,
+                number_of_registrants=eligibility_summary_student.number_of_registrants,
+                date_created=eligibility_summary_student.date_created,
+                total_entitlement_amount=eligibility_summary_student.total_entitlement_amount,
+                average_entitlement_per_registrant=eligibility_summary_student.average_entitlement_per_person,
+            ),
+            registry_summary=RegistrySummaryStudentPayload(
                 age_mean=eligibility_summary_student.age_mean,
                 age_quartile_25=eligibility_summary_student.age_quartile_25,
                 age_quartile_50=eligibility_summary_student.age_quartile_50,
                 age_quartile_75=eligibility_summary_student.age_quartile_75,
-            ),
-            entitlement_summary=EntitlementSummaryStudentPayload(
-                total_entitlement_amount=eligibility_summary_student.total_entitlement_amount,
-                average_entitlement_per_person=eligibility_summary_student.average_entitlement_per_person,
                 average_entitlement_female=eligibility_summary_student.average_entitlement_female,
                 average_entitlement_male=eligibility_summary_student.average_entitlement_male,
                 entitlement_amount_q1=eligibility_summary_student.entitlement_amount_q1,
@@ -146,7 +149,7 @@ class EEERegistryStudent(EEERegistryInterface):
         self,
         sr_session: AsyncSession,
         pbms_request_id: str,
-        registrant_ids: List[int],
+        registrant_ids: List[str],
         search_query: str,
     ) -> int:
         (
@@ -165,14 +168,18 @@ class EEERegistryStudent(EEERegistryInterface):
     # Eligibility Celery Worker Methods
     # =================================
     def compute_and_persist_summary(
-        self, registrant_ids, base_summary, sr_session: Session, eee_session: Session
+        self, eee_details: List[dict], base_summary, sr_session: Session, eee_session: Session
     ):
-        registrants = self.get_registrants(registrant_ids, sr_session)
-        students_age = [
-            self.calculate_age(student.date_of_birth)
-            for student in registrants
-            if student.date_of_birth
-        ]
+        students_age = []
+
+        for eee_detail in eee_details:
+            registrant_ids = []
+            for registrant in json.loads(eee_detail["registrant_details"]):
+                registrant_ids.append(registrant["registrant_id"])
+
+            registrants = self.get_registrants(registrant_ids, sr_session)
+            for student in registrants:
+                students_age.append(self.calculate_age(student.date_of_birth))
 
         student_summary = EEESummaryStudent(
             program_id=base_summary.program_id,
@@ -201,7 +208,7 @@ class EEERegistryStudent(EEERegistryInterface):
     def get_registrants(self, registrant_ids, sr_session) -> List[G2PStudentRegistry]:
         return (
             sr_session.query(G2PStudentRegistry)
-            .filter(G2PStudentRegistry.id.in_(registrant_ids))
+            .filter(G2PStudentRegistry.unique_id.in_(registrant_ids))
             .all()
         )
 
@@ -217,8 +224,20 @@ class EEERegistryStudent(EEERegistryInterface):
     # =================================
     # Entitlement Celery Worker Methods
     # =================================
+
+    def lock_and_update_summary(
+        self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
+    ) -> None:
+        try:
+            summary_student = eee_session.query(EEESummaryStudent).filter_by(pbms_request_id = pbms_request_id).with_for_update().one()
+            summary_student.number_of_entitlements_processed += number_of_registrants
+            eee_session.commit()
+        except Exception as e:
+            eee_session.rollback()
+            raise e
+
     def get_is_registant_entitled(
-        self, registrant_id: int, sql_query: str, sr_session: Session
+        self, registrant_id: str, sql_query: str, sr_session: Session
     ) -> bool:
         sql_query_with_registrant_id = (
             self.construct_get_is_registrant_entitled_sql_query(
@@ -230,10 +249,20 @@ class EEERegistryStudent(EEERegistryInterface):
         return result is not None
 
     def compute_entitlements_and_modify_summary(
-        self, entitlements: List[float], pbms_request_id: str, eee_session: Session
+        self, pbms_request_id: str, eee_session: Session
     ):
-        if not entitlements:
+        summary_student = eee_session.query(EEESummaryStudent).filter_by(pbms_request_id = pbms_request_id).first()
+
+        if summary_student.number_of_entitlements_processed != summary_student.number_of_registrants:
             return
+
+        eee_details = eee_session.query(EEEDetails).filter_by(pbms_request_id = pbms_request_id).all()
+
+        entitlements = []
+
+        for eee_detail in eee_details:
+            for registrant_detail in eee_detail.registrant_details:
+                entitlements.append(registrant_detail["entitlement_quantity"])
 
         entitlement_values = np.array(entitlements)
 
@@ -250,7 +279,7 @@ class EEERegistryStudent(EEERegistryInterface):
             np.percentile(entitlement_values, 75, method="midpoint")
         )
 
-        # Update g2p_eligibility_summary_farmer record
+        # Update g2p_eligibility_summary_student record
         eee_session.execute(
             update(EEESummaryStudent)
             .where(EEESummaryStudent.pbms_request_id == pbms_request_id)
