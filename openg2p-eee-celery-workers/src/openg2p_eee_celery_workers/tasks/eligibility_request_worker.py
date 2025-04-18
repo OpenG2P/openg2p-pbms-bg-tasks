@@ -89,10 +89,12 @@ def eligibility_request_worker(id: int):
                     break
                 for row in batch:
                     number_of_registrants_for_batch += 1
-                    registrant_details.append(RegistrantDetails(
-                        registrant_id=row[0],
-                        entitlement_quantity=0,
-                    ).model_dump(mode="json"))
+                    registrant_details.append(
+                        RegistrantDetails(
+                            registrant_id=row[0],
+                            entitlement_quantity=0,
+                        ).model_dump(mode="json")
+                    )
 
                 total_number_of_registrants += number_of_registrants_for_batch
                 eee_details.append(
@@ -105,9 +107,7 @@ def eligibility_request_worker(id: int):
                 )
 
             _logger.info(f"Adding eligibility details for queue id: {id}")
-            persist_eee_details(
-                eee_details, eee_session
-            )
+            persist_eee_details(eee_details, eee_session)
 
             _logger.debug(
                 f"Count of registrant IDs for queue id {id} are: {total_number_of_registrants}"

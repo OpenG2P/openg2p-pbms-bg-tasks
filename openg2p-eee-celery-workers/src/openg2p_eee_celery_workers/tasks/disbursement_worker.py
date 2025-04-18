@@ -24,9 +24,13 @@ _logger = logging.getLogger(_config.logging_default_logger_name)
 _engine = get_engine()
 
 
-def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narrative: str):
+def create_disbursement(
+    disbursement_batch: DisbursementBatch, eee_session, narrative: str
+):
     try:
-        registrant_details: List[RegistrantDetails] = disbursement_batch.registrant_details
+        registrant_details: List[
+            RegistrantDetails
+        ] = disbursement_batch.registrant_details
         disbursement_payloads = []
 
         for registrant in registrant_details:
@@ -38,7 +42,7 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narr
                 beneficiary_id=registrant_detail.registrant_id,
                 beneficiary_name="Beneficiary Name",
                 disbursement_amount=registrant_detail.entitlement_quantity,
-                narrative=narrative
+                narrative=narrative,
             )
             disbursement_payloads.append(disbursement_payload)
 
@@ -52,14 +56,13 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narr
             receiver_id="",
             total_count=len(registrant_details),
             is_msg_encrypted=False,
-            meta="string"
+            meta="string",
         )
 
         disbursement_request = DisbursementRequest(
-            header=disbursement_header,
-            message=disbursement_payloads
+            header=disbursement_header, message=disbursement_payloads
         )
-        disbursement_request_json = disbursement_request.model_dump(mode='json')
+        disbursement_request_json = disbursement_request.model_dump(mode="json")
         disbursement_request_json.update(
             {
                 "iss": _config.issuer,
@@ -80,18 +83,22 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narr
             "Content-Type": "application/json",
             "Authorization": jwt_token,
         }
-        _logger.info(f"Calling disbursement creation endpoint for disbursement batch id {disbursement_batch.id} having {len(registrant_details)} beneficiaries")
+        _logger.info(
+            f"Calling disbursement creation endpoint for disbursement batch id {disbursement_batch.id} having {len(registrant_details)} beneficiaries"
+        )
 
         response = requests.post(
-            disbursement_url,
-            json=disbursement_request_json,
-            headers=headers
+            disbursement_url, json=disbursement_request_json, headers=headers
         )
         response.raise_for_status()
-        _logger.info(f"Response status code for disbursement batch id {disbursement_batch.id}: {response.status_code}")
+        _logger.info(
+            f"Response status code for disbursement batch id {disbursement_batch.id}: {response.status_code}"
+        )
 
         disbursement_response = DisbursementResponse.model_validate(response.json())
-        _logger.debug(f"Response for disbursement batch id {disbursement_batch.id}: {disbursement_response}")
+        _logger.debug(
+            f"Response for disbursement batch id {disbursement_batch.id}: {disbursement_response}"
+        )
 
         return disbursement_response, None
 
@@ -99,8 +106,10 @@ def create_disbursement(disbursement_batch: DisbursementBatch, eee_session, narr
         _logger.error(f"Error occurred while calling disbursement API: {e}")
         return None, str(e)
 
+
 def construct_narrative(disbursement_cycle_mnemonic: str, program_mnemonic: str) -> str:
     return f"{program_mnemonic} - {disbursement_cycle_mnemonic}"
+
 
 @celery_app.task(name="disbursement_worker")
 def disbursement_worker(id: int):
@@ -124,13 +133,19 @@ def disbursement_worker(id: int):
 
             disbursement_cycle_mnemonic = (
                 pbms_session.query(G2PDisbursementCycle.cycle_mnemonic)
-                .filter(G2PDisbursementCycle.id == disbursement_batch.disbursement_cycle_id)
+                .filter(
+                    G2PDisbursementCycle.id == disbursement_batch.disbursement_cycle_id
+                )
                 .first()
             )
-            disbursement_cycle_mnemonic: str = disbursement_cycle_mnemonic[0] if disbursement_cycle_mnemonic else None
+            disbursement_cycle_mnemonic: str = (
+                disbursement_cycle_mnemonic[0] if disbursement_cycle_mnemonic else None
+            )
 
             if not disbursement_cycle_mnemonic:
-                raise Exception(f"No disbursement cycle mnemonic found for batch id: {id}")
+                raise Exception(
+                    f"No disbursement cycle mnemonic found for batch id: {id}"
+                )
 
             program_mnemonic = (
                 pbms_session.query(G2PProgramDefinition.program_mnemonic)
@@ -142,16 +157,22 @@ def disbursement_worker(id: int):
             if not program_mnemonic:
                 raise Exception(f"No program mnemonic found for batch id: {id}")
 
-            narrative: str = construct_narrative(disbursement_cycle_mnemonic, program_mnemonic)
+            narrative: str = construct_narrative(
+                disbursement_cycle_mnemonic, program_mnemonic
+            )
 
             # Call the separated disbursement creation function
-            disbursement_response, error = create_disbursement(disbursement_batch, eee_session, narrative)
+            disbursement_response, error = create_disbursement(
+                disbursement_batch, eee_session, narrative
+            )
             if error:
                 raise Exception(f"Error creating disbursement: {error}")
 
             # Save the disbursement response to the database
             for disbursement in disbursement_response.message:
-                _logger.debug(f"Disbursement response: {disbursement.model_dump(mode='json')}")
+                _logger.debug(
+                    f"Disbursement response: {disbursement.model_dump(mode='json')}"
+                )
 
                 disbursement_record = Disbursement(
                     bridge_disbursement_id=disbursement.disbursement_id,
@@ -168,9 +189,13 @@ def disbursement_worker(id: int):
             disbursement_batch.disbursement_status = StatusEnum.COMPLETE.value
             disbursement_batch.bridge_disbursement_error_code = None
             disbursement_batch.bridge_disbursement_status_attempts += 1
-            disbursement_batch.bridge_disbursement_status_latest_timestamp = datetime.now()
+            disbursement_batch.bridge_disbursement_status_latest_timestamp = (
+                datetime.now()
+            )
             eee_session.commit()
-            _logger.info(f"DisbursementBatch records created successfully for cycle id: {id}")
+            _logger.info(
+                f"DisbursementBatch records created successfully for cycle id: {id}"
+            )
 
         except Exception as e:
             _logger.error(f"Error in disbursement batch worker: {e}")

@@ -25,20 +25,13 @@ def eee_entitlement_beat_producer():
         eee_details: List[EEEDetails] = (
             eee_session.execute(
                 select(EEEDetails)
-                .filter(
-                    (
-                        EEEDetails.entitlement_status
-                        == StatusEnum.PENDING.value
-                    )
-                )
+                .filter(EEEDetails.entitlement_status == StatusEnum.PENDING.value)
                 .limit(_config.batch_size)
             )
             .scalars()
             .all()
         )
-        _logger.info(
-            f"Found {len(eee_details)} pending entitlement requests"
-        )
+        _logger.info(f"Found {len(eee_details)} pending entitlement requests")
 
         for eee_detail in eee_details:
             _logger.info(f"Queueing EEE entitlement request ID: {eee_detail.id}")

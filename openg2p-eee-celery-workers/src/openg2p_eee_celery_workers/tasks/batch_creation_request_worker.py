@@ -41,11 +41,16 @@ def batch_creation_request_worker(id: int):
                 raise Exception(f"No queue entry found for queue id: {id}")
 
             # Get all EEEDetails rows for the given pbms_request_id
-            eee_details = eee_session.execute(
-                select(EEEDetails).where(
-                    EEEDetails.pbms_request_id == g2p_disbursement_cycle.pbms_request_id
+            eee_details = (
+                eee_session.execute(
+                    select(EEEDetails).where(
+                        EEEDetails.pbms_request_id
+                        == g2p_disbursement_cycle.pbms_request_id
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             _logger.info(f"Total batches fetched from EEEDetails: {len(eee_details)}")
 
@@ -63,7 +68,9 @@ def batch_creation_request_worker(id: int):
 
             # Commit the changes to the database
             eee_session.commit()
-            _logger.info(f"DisbursementBatch records created successfully for cycle id: {id}")
+            _logger.info(
+                f"DisbursementBatch records created successfully for cycle id: {id}"
+            )
 
             g2p_disbursement_cycle.batch_creation_status = StatusEnum.COMPLETE.value
             g2p_disbursement_cycle.batch_creation_latest_error_code = None

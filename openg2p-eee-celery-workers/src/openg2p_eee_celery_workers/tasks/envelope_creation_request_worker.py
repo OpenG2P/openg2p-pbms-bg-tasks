@@ -65,15 +65,16 @@ def create_disbursement_envelope(
         receiver_id="",
         total_count=1,
         is_msg_encrypted=False,
-        meta="string"
+        meta="string",
     )
     disbursement_envelope_request: DisbursementEnvelopeRequest = (
         DisbursementEnvelopeRequest(
-            header=disbursement_envelope_request_header,
-            message=envelope_payload
+            header=disbursement_envelope_request_header, message=envelope_payload
         )
     )
-    disbursement_envelope_request_json = disbursement_envelope_request.model_dump(mode='json')
+    disbursement_envelope_request_json = disbursement_envelope_request.model_dump(
+        mode="json"
+    )
     disbursement_envelope_request_json.update(
         {
             "iss": _config.issuer,
@@ -82,12 +83,16 @@ def create_disbursement_envelope(
             "exp": datetime.now() + timedelta(minutes=5),
         }
     )
-    _logger.debug(f"Disbursement Envelope Request: {disbursement_envelope_request_json}")
+    _logger.debug(
+        f"Disbursement Envelope Request: {disbursement_envelope_request_json}"
+    )
 
     envelope_creation_url = _config.g2p_bridge_envelope_creation_url
     _logger.debug(f"Envelope Creation URL: {envelope_creation_url}")
 
-    jwt_token = create_jwt_token(disbursement_envelope_request_json, _config.private_key)
+    jwt_token = create_jwt_token(
+        disbursement_envelope_request_json, _config.private_key
+    )
 
     headers = {
         "Accept": "application/json",
@@ -95,24 +100,31 @@ def create_disbursement_envelope(
         "Authorization": jwt_token,
     }
 
-    _logger.info(f"Calling envelope creation endpoint for disbursement cycle id {disbursement_cycle.id}")
+    _logger.info(
+        f"Calling envelope creation endpoint for disbursement cycle id {disbursement_cycle.id}"
+    )
     try:
         response = requests.post(
             envelope_creation_url,
             json=disbursement_envelope_request_json,
-            headers=headers
+            headers=headers,
         )
         response.raise_for_status()
-        _logger.info(f"Response status code for disbursement cycle id {disbursement_cycle.id}: {response.status_code}")
+        _logger.info(
+            f"Response status code for disbursement cycle id {disbursement_cycle.id}: {response.status_code}"
+        )
 
         envelope_response = DisbursementEnvelopeResponse.model_validate(response.json())
-        _logger.debug(f"Response for disbursement cycle id {disbursement_cycle.id}: {envelope_response}")
+        _logger.debug(
+            f"Response for disbursement cycle id {disbursement_cycle.id}: {envelope_response}"
+        )
 
         return envelope_response, None
 
     except Exception as e:
         _logger.error(f"Error occurred while calling envelope creation API: {e}")
         return None, str(e)
+
 
 async def fetch_eee_summary(eee_registry_interface, pbms_request_id, eee_session_maker):
     async with eee_session_maker() as eee_session:
@@ -172,7 +184,6 @@ def envelope_creation_request_worker(id: int):
                 )
             )
 
-
             if not eee_summary_payload:
                 raise Exception(
                     f"No summary found for pbms_request_id: {disbursement_cycle.pbms_request_id}"
@@ -186,7 +197,9 @@ def envelope_creation_request_worker(id: int):
                 eee_summary_payload,
                 pbms_session,
             )
-            _logger.debug(f"Disbursement envelope response: {disbursement_envelope_response}")
+            _logger.debug(
+                f"Disbursement envelope response: {disbursement_envelope_response}"
+            )
 
             if error:
                 raise Exception(f"Error occurred while creating envelope: {error}")
@@ -201,7 +214,9 @@ def envelope_creation_request_worker(id: int):
             disbursement_cycle.batch_creation_status = StatusEnum.PENDING.value
             pbms_session.commit()
 
-            _logger.info(f"Envelope creation successful for disbursement cycle id: {id}")
+            _logger.info(
+                f"Envelope creation successful for disbursement cycle id: {id}"
+            )
 
         except Exception as e:
             _logger.error(

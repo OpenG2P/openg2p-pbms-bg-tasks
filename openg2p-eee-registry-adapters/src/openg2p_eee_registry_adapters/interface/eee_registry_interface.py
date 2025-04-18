@@ -20,9 +20,7 @@ class EEERegistryInterface(ABC):
     def lock_and_update_summary(
         self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
     ) -> None:
-        raise NotImplementedError(
-            "Subclasses must implement lock_and_update_summary()"
-        )
+        raise NotImplementedError("Subclasses must implement lock_and_update_summary()")
 
     @abstractmethod
     async def get_summary(
@@ -71,7 +69,11 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def compute_and_persist_summary(
-        self, eee_details: List[dict], base_summary, sr_session: Session, eee_session: Session
+        self,
+        eee_details: List[dict],
+        base_summary,
+        sr_session: Session,
+        eee_session: Session,
     ):
         # Abstract method to compute summary statistics
         raise NotImplementedError("Subclasses must implement compute_summary()")
@@ -159,7 +161,9 @@ class EEERegistryInterface(ABC):
             raise ValueError("Invalid SQL query: Must be a valid SELECT statement")
 
         if "WHERE" in sql_query.upper():
-            sql_query += f" AND g2p_{target_registry_type}_registry.unique_id = :registrant_id"
+            sql_query += (
+                f" AND g2p_{target_registry_type}_registry.unique_id = :registrant_id"
+            )
         else:
             sql_query += (
                 f" WHERE g2p_{target_registry_type}_registry.unique_id = :registrant_id"

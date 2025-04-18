@@ -10,5 +10,5 @@ def persist_eee_details(eee_details, eee_session):
             VALUES (:pbms_request_id, :registrant_details, :entitlement_status, :number_of_registrants)
             """
         ),
-        eee_details
+        eee_details,
     )

@@ -40,9 +40,7 @@ def entitlement_request_worker(id: int):
         try:
             # Fetch the queue entry from pbms db using id
             eee_details = (
-                eee_session.query(EEEDetails)
-                .filter(EEEDetails.id == id)
-                .first()
+                eee_session.query(EEEDetails).filter(EEEDetails.id == id).first()
             )
             if not eee_details:
                 _logger.error(f"No EEEDetails entry found for id: {id}")
@@ -82,7 +80,9 @@ def entitlement_request_worker(id: int):
             for registrant_details_json in eee_details.registrant_details:
                 registrant_details = RegistrantDetails(**registrant_details_json)
 
-                if max_quantity and (registrant_details.entitlement_quantity == max_quantity):
+                if max_quantity and (
+                    registrant_details.entitlement_quantity == max_quantity
+                ):
                     continue
                 else:
                     for entitlement_rule_definition in entitlement_rule_definitions:
@@ -127,7 +127,9 @@ def entitlement_request_worker(id: int):
                     f"Entitlement processed for registrant_id {registrant_details.registrant_id} for pbms_request_id"
                 )
 
-            eee_details.registrant_details = [r.model_dump(mode="json") for r in registrant_details_list]
+            eee_details.registrant_details = [
+                r.model_dump(mode="json") for r in registrant_details_list
+            ]
 
             eee_details.entitlement_status = StatusEnum.COMPLETE.value
             eee_session.add(eee_details)
@@ -142,7 +144,9 @@ def entitlement_request_worker(id: int):
                     EEERegistryFactory.get_computation_class(target_registry_type)
                 )
                 eee_registry_interface.lock_and_update_summary(
-                    eee_details.number_of_registrants, eee_details.pbms_request_id, eee_session
+                    eee_details.number_of_registrants,
+                    eee_details.pbms_request_id,
+                    eee_session,
                 )
 
                 # Compute summary and add to session
