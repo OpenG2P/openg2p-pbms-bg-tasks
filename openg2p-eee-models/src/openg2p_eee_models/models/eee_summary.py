@@ -16,11 +16,11 @@ class EEESummary(BaseORMModel):
     number_of_registrants = mapped_column(Integer, nullable=False)
     number_of_entitlements_processed = mapped_column(Integer, nullable=False, default=0)
 
-    total_entitlement_amount = mapped_column(Float, nullable=True)
-    average_entitlement_per_person = mapped_column(Float, nullable=True)
-    entitlement_amount_q1 = mapped_column(Float, nullable=True)
-    entitlement_amount_q2 = mapped_column(Float, nullable=True)
-    entitlement_amount_q3 = mapped_column(Float, nullable=True)
+    total_entitlement_amount = mapped_column(Float, nullable=True, default=0)
+    average_entitlement_per_person = mapped_column(Float, nullable=True, default=0)
+    entitlement_amount_q1 = mapped_column(Float, nullable=True, default=0)
+    entitlement_amount_q2 = mapped_column(Float, nullable=True, default=0)
+    entitlement_amount_q3 = mapped_column(Float, nullable=True, default=0)
 
     date_created = mapped_column(
         DateTime, default=datetime.now(timezone.utc), nullable=False
