@@ -9,3 +9,4 @@ class G2PStudentRegistry(G2PRegistry):
     name = mapped_column(String, nullable=False)
     institution_name = mapped_column(String, nullable=True)
     date_of_birth = mapped_column(Date, nullable=True)
+

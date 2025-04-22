@@ -10,3 +10,4 @@ class G2PFarmerRegistry(G2PRegistry):
     land_area = mapped_column(Float, nullable=True)
     no_of_cattle_heads = mapped_column(Integer, nullable=True)
     no_of_poultry_heads = mapped_column(Integer, nullable=True)
+    annual_income = mapped_column(Float, nullable=True)
