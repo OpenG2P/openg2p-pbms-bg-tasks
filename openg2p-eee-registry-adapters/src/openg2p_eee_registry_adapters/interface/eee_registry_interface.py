@@ -24,10 +24,17 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     async def get_summary(
-        self, pbms_request_id: str, eee_session: Session
+        self, pbms_request_id: str, eee_session: Session, formated: bool = False
     ) -> EEESummaryPayload:
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary()")
+
+    @abstractmethod
+    def get_summary_sync(
+        self, pbms_request_id: str, eee_session: Session
+    ) -> EEESummaryPayload:
+        # Abstract method to get summary statistics
+        raise NotImplementedError("Subclasses must implement get_summary_sync()")
 
     @abstractmethod
     def get_registrants(self, registrant_ids) -> List[G2PRegistry]:
@@ -45,7 +52,7 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def compute_entitlements_and_modify_summary(
-        self, pbms_request_id: str, eee_session: Session
+        self, pbms_request_id: str, eee_session: Session, sr_session: Session
     ):
         # Abstract method to compute entitlements fields and modify summary
         raise NotImplementedError(
