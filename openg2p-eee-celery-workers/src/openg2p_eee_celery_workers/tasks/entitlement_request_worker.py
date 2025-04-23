@@ -151,7 +151,7 @@ def entitlement_request_worker(id: int):
 
                 # Compute summary and add to session
                 eee_registry_interface.compute_entitlements_and_modify_summary(
-                    eee_details.pbms_request_id, eee_session
+                    eee_details.pbms_request_id, eee_session, sr_session
                 )
 
                 _logger.info(

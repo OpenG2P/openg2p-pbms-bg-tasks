@@ -6,25 +6,25 @@ from .eee_summary import EEESummaryPayload
 
 
 class RegistrySummaryFarmerPayload(BaseModel):
-    land_holding_mean: Optional[float]
-    land_holding_quartile_25: Optional[float]
-    land_holding_quartile_50: Optional[float]
-    land_holding_quartile_75: Optional[float]
-    annual_income_mean: Optional[float]
-    annual_income_quartile_25: Optional[float]
-    annual_income_quartile_50: Optional[float]
-    annual_income_quartile_75: Optional[float]
-    average_entitlement_female: Optional[float] = None
-    average_entitlement_male: Optional[float] = None
-    entitlement_amount_q1: Optional[float] = None
-    entitlement_amount_q2: Optional[float] = None
-    entitlement_amount_q3: Optional[float] = None
-    entitlement_amount_male_q1: Optional[float] = None
-    entitlement_amount_male_q2: Optional[float] = None
-    entitlement_amount_male_q3: Optional[float] = None
-    entitlement_amount_female_q1: Optional[float] = None
-    entitlement_amount_female_q2: Optional[float] = None
-    entitlement_amount_female_q3: Optional[float] = None
+    land_holding_mean: Optional[str]
+    land_holding_quartile_75: Optional[str]
+    land_holding_quartile_50: Optional[str]
+    land_holding_quartile_25: Optional[str]
+    annual_income_mean: Optional[str]
+    annual_income_quartile_75: Optional[str]
+    annual_income_quartile_50: Optional[str]
+    annual_income_quartile_25: Optional[str]
+    average_entitlement_female: Optional[str] = None
+    average_entitlement_male: Optional[str] = None
+    entitlement_amount_75: Optional[str] = None
+    entitlement_amount_50: Optional[str] = None
+    entitlement_amount_25: Optional[str] = None
+    entitlement_amount_male_75: Optional[str] = None
+    entitlement_amount_male_50: Optional[str] = None
+    entitlement_amount_male_25: Optional[str] = None
+    entitlement_amount_female_75: Optional[str] = None
+    entitlement_amount_female_50: Optional[str] = None
+    entitlement_amount_female_25: Optional[str] = None
 
 
 class EEESummaryFarmerPayload(EEESummaryPayload):

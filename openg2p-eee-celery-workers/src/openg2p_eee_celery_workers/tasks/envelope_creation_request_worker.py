@@ -125,23 +125,17 @@ def create_disbursement_envelope(
         _logger.error(f"Error occurred while calling envelope creation API: {e}")
         return None, str(e)
 
-
-async def fetch_eee_summary(eee_registry_interface, pbms_request_id, eee_session_maker):
-    async with eee_session_maker() as eee_session:
-        return await eee_registry_interface.get_summary(pbms_request_id, eee_session)
-
-
 @celery_app.task(name="envelope_creation_request_worker")
 def envelope_creation_request_worker(id: int):
     _logger.info("Starting envelope creation request")
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
-    eee_session_maker = async_sessionmaker(
-        bind=_engine.get("db_engine_eee_async"), expire_on_commit=False
+    eee_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_eee"), expire_on_commit=False
     )
 
-    with pbms_session_maker() as pbms_session:
+    with pbms_session_maker() as pbms_session, eee_session_maker() as eee_session:
         disbursement_cycle = None
         try:
             # Fetch the queue entry from pbms db using id
@@ -175,14 +169,7 @@ def envelope_creation_request_worker(id: int):
                 f"Fetching summary for pbms_request_id: {disbursement_cycle.pbms_request_id}"
             )
 
-            # Fetch the eee summary from eee db using pbms_request_id based on target_registry_type
-            eee_summary_payload: EEESummaryPayload = asyncio.run(
-                fetch_eee_summary(
-                    eee_registry_interface,
-                    disbursement_cycle.pbms_request_id,
-                    eee_session_maker,
-                )
-            )
+            eee_summary_payload: EEESummaryPayload = eee_registry_interface.get_summary_sync(disbursement_cycle.pbms_request_id, eee_session)
 
             if not eee_summary_payload:
                 raise Exception(
