@@ -10,7 +10,7 @@ class EEESummaryStudent(EEESummary):
     age_quartile_25 = mapped_column(Float, nullable=True, default=0)
     age_quartile_50 = mapped_column(Float, nullable=True, default=0)
     age_quartile_75 = mapped_column(Float, nullable=True, default=0)
-    age_units = mapped_column(String, nullable=False, default='years')
+    age_units = mapped_column(String, nullable=False, default="years")
 
     average_entitlement_female = mapped_column(Float, nullable=True, default=0)
     average_entitlement_male = mapped_column(Float, nullable=True, default=0)
@@ -20,4 +20,4 @@ class EEESummaryStudent(EEESummary):
     entitlement_amount_female_q1 = mapped_column(Float, nullable=True, default=0)
     entitlement_amount_female_q2 = mapped_column(Float, nullable=True, default=0)
     entitlement_amount_female_q3 = mapped_column(Float, nullable=True, default=0)
-    entitlement_units = mapped_column(String, nullable=False, default='INR')
+    entitlement_units = mapped_column(String, nullable=False, default="INR")

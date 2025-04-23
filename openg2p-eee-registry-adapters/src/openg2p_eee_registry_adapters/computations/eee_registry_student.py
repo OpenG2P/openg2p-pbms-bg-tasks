@@ -51,10 +51,20 @@ class EEERegistryStudent(EEERegistryInterface):
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
                 target_registry_type=eligibility_summary_student.target_registry_type,
                 pbms_request_id=eligibility_summary_student.pbms_request_id,
-                number_of_registrants=format(eligibility_summary_student.number_of_registrants, ","),
+                number_of_registrants=format(
+                    eligibility_summary_student.number_of_registrants, ","
+                ),
                 date_created=eligibility_summary_student.date_created,
-                total_entitlement_amount=format(eligibility_summary_student.total_entitlement_amount, ",") + " " + eligibility_summary_student.entitlement_units,
-                average_entitlement_per_registrant=format(eligibility_summary_student.average_entitlement_per_person, ",") + " " + eligibility_summary_student.entitlement_units,
+                total_entitlement_amount=format(
+                    eligibility_summary_student.total_entitlement_amount, ","
+                )
+                + " "
+                + eligibility_summary_student.entitlement_units,
+                average_entitlement_per_registrant=format(
+                    eligibility_summary_student.average_entitlement_per_person, ","
+                )
+                + " "
+                + eligibility_summary_student.entitlement_units,
             ),
             registry_summary=RegistrySummaryStudentPayload(
                 age_mean=f"{eligibility_summary_student.age_mean} {eligibility_summary_student.age_units}",
@@ -80,9 +90,11 @@ class EEERegistryStudent(EEERegistryInterface):
     def get_summary_sync(
         self, pbms_request_id: str, eee_session: Session
     ) -> EEESummaryStudentPayload:
-        eligibility_summary_student = eee_session.query(EEESummaryStudent).filter_by(
-            pbms_request_id=pbms_request_id
-        ).first()
+        eligibility_summary_student = (
+            eee_session.query(EEESummaryStudent)
+            .filter_by(pbms_request_id=pbms_request_id)
+            .first()
+        )
 
         summary = EEESummaryStudentPayload(
             general_summary=EEEGeneralSummary(
@@ -131,11 +143,9 @@ class EEERegistryStudent(EEERegistryInterface):
         page_size=10,
         order_by="id asc",
     ) -> EEEBeneficiarySearchResponsePayload:
-        registrant_details = await (
-            eee_session.execute(
-                select(EEEDetails.registrant_details).where(
-                    EEEDetails.pbms_request_id == pbms_request_id
-                )
+        registrant_details = await eee_session.execute(
+            select(EEEDetails.registrant_details).where(
+                EEEDetails.pbms_request_id == pbms_request_id
             )
         )
         registrant_details = registrant_details.scalars().all()
@@ -241,15 +251,15 @@ class EEERegistryStudent(EEERegistryInterface):
 
         if students_age:
             students_age_array = np.array(students_age)
-            student_summary.age_quartile_25 = round(float(
-                np.percentile(students_age_array, 25, method="midpoint")
-            ), 2)
-            student_summary.age_quartile_50 = round(float(
-                np.percentile(students_age_array, 50, method="midpoint")
-            ), 2)
-            student_summary.age_quartile_75 = round(float(
-                np.percentile(students_age_array, 75, method="midpoint")
-            ), 2)
+            student_summary.age_quartile_25 = round(
+                float(np.percentile(students_age_array, 25, method="midpoint")), 2
+            )
+            student_summary.age_quartile_50 = round(
+                float(np.percentile(students_age_array, 50, method="midpoint")), 2
+            )
+            student_summary.age_quartile_75 = round(
+                float(np.percentile(students_age_array, 75, method="midpoint")), 2
+            )
             student_summary.age_mean = round(float(np.mean(students_age_array)), 2)
 
         eee_session.add(student_summary)
@@ -330,57 +340,71 @@ class EEERegistryStudent(EEERegistryInterface):
         for eee_detail in eee_details:
             for registrant_detail in eee_detail.registrant_details:
                 entitlements.append(registrant_detail["entitlement_quantity"])
-                if self._get_registrant_gender(registrant_detail["registrant_id"], sr_session) == Gender.MALE:
+                if (
+                    self._get_registrant_gender(
+                        registrant_detail["registrant_id"], sr_session
+                    )
+                    == Gender.MALE
+                ):
                     entitlements_male.append(registrant_detail["entitlement_quantity"])
-                elif self._get_registrant_gender(registrant_detail["registrant_id"], sr_session) == Gender.FEMALE:
-                    entitlements_female.append(registrant_detail["entitlement_quantity"])
+                elif (
+                    self._get_registrant_gender(
+                        registrant_detail["registrant_id"], sr_session
+                    )
+                    == Gender.FEMALE
+                ):
+                    entitlements_female.append(
+                        registrant_detail["entitlement_quantity"]
+                    )
                 else:
-                    raise ValueError("Invalid gender encountered while processing entitlements")
+                    raise ValueError(
+                        "Invalid gender encountered while processing entitlements"
+                    )
 
         # Compute entitlement summary statistics
         entitlements_array = np.array(entitlements)
 
         total_entitlement_amount = round(float(np.sum(entitlements_array)), 2)
         average_entitlement_per_person = round(float(np.mean(entitlements_array)), 2)
-        entitlement_amount_q1 = round(float(
-            np.percentile(entitlements_array, 25, method="midpoint")
-        ), 2)
-        entitlement_amount_q2 = round(float(
-            np.percentile(entitlements_array, 50, method="midpoint")
-        ), 2)
-        entitlement_amount_q3 = round(float(
-            np.percentile(entitlements_array, 75, method="midpoint")
-        ), 2)
+        entitlement_amount_q1 = round(
+            float(np.percentile(entitlements_array, 25, method="midpoint")), 2
+        )
+        entitlement_amount_q2 = round(
+            float(np.percentile(entitlements_array, 50, method="midpoint")), 2
+        )
+        entitlement_amount_q3 = round(
+            float(np.percentile(entitlements_array, 75, method="midpoint")), 2
+        )
 
         # Compute statistics for male registrant entitlements
         entitlements_male_array = np.array(entitlements_male)
 
         total_entitlement_amount = round(float(np.sum(entitlements_male_array)), 2)
         average_entitlement_male = round(float(np.mean(entitlements_male_array)), 2)
-        entitlement_amount_male_q1 = round(float(
-            np.percentile(entitlements_male_array, 25, method="midpoint")
-        ), 2)
-        entitlement_amount_male_q2 = round(float(
-            np.percentile(entitlements_male_array, 50, method="midpoint")
-        ), 2)
-        entitlement_amount_male_q3 = round(float(
-            np.percentile(entitlements_male_array, 75, method="midpoint")
-        ), 2)
+        entitlement_amount_male_q1 = round(
+            float(np.percentile(entitlements_male_array, 25, method="midpoint")), 2
+        )
+        entitlement_amount_male_q2 = round(
+            float(np.percentile(entitlements_male_array, 50, method="midpoint")), 2
+        )
+        entitlement_amount_male_q3 = round(
+            float(np.percentile(entitlements_male_array, 75, method="midpoint")), 2
+        )
 
         # Compute statistics for female registrant entitlements
         entitlements_female_array = np.array(entitlements_female)
 
         total_entitlement_amount = round(float(np.sum(entitlements_female_array)), 2)
         average_entitlement_female = round(float(np.mean(entitlements_female_array)), 2)
-        entitlement_amount_female_q1 = round(float(
-            np.percentile(entitlements_female_array, 25, method="midpoint")
-        ), 2)
-        entitlement_amount_female_q2 = round(float(
-            np.percentile(entitlements_female_array, 50, method="midpoint")
-        ), 2)
-        entitlement_amount_female_q3 = round(float(
-            np.percentile(entitlements_female_array, 75, method="midpoint")
-        ), 2)
+        entitlement_amount_female_q1 = round(
+            float(np.percentile(entitlements_female_array, 25, method="midpoint")), 2
+        )
+        entitlement_amount_female_q2 = round(
+            float(np.percentile(entitlements_female_array, 50, method="midpoint")), 2
+        )
+        entitlement_amount_female_q3 = round(
+            float(np.percentile(entitlements_female_array, 75, method="midpoint")), 2
+        )
 
         # Update g2p_eligibility_summary_farmer record
         eee_session.execute(
@@ -404,5 +428,9 @@ class EEERegistryStudent(EEERegistryInterface):
         )
 
     def _get_registrant_gender(self, registrant_id: str, sr_session: Session) -> str:
-        result = sr_session.query(G2PStudentRegistry.gender).filter_by(unique_id=registrant_id).first()
+        result = (
+            sr_session.query(G2PStudentRegistry.gender)
+            .filter_by(unique_id=registrant_id)
+            .first()
+        )
         return result[0] if result else None

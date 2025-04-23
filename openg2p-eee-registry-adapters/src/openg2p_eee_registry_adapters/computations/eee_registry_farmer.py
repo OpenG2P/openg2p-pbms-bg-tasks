@@ -29,7 +29,7 @@ class EEERegistryFarmer(EEERegistryInterface):
     # Summary API Methods
     # ===================
     async def get_summary(
-        self, pbms_request_id: str, eee_session: AsyncSession,  formated: bool = False
+        self, pbms_request_id: str, eee_session: AsyncSession, formated: bool = False
     ) -> EEESummaryFarmerPayload:
         eligibility_summary_farmer = await eee_session.execute(
             select(EEESummaryFarmer).where(
@@ -39,13 +39,25 @@ class EEERegistryFarmer(EEERegistryInterface):
         eligibility_summary_farmer = eligibility_summary_farmer.scalars().first()
 
         number_of_registrants = eligibility_summary_farmer.number_of_registrants
-        total_entitlement_amount=eligibility_summary_farmer.total_entitlement_amount
-        average_entitlement_per_registrant=eligibility_summary_farmer.average_entitlement_per_person
+        total_entitlement_amount = eligibility_summary_farmer.total_entitlement_amount
+        average_entitlement_per_registrant = (
+            eligibility_summary_farmer.average_entitlement_per_person
+        )
 
         if formated:
-            number_of_registrants = format(eligibility_summary_farmer.number_of_registrants, ",")
-            total_entitlement_amount=format(eligibility_summary_farmer.total_entitlement_amount, ",") + " " + eligibility_summary_farmer.entitlement_units
-            average_entitlement_per_registrant=format(eligibility_summary_farmer.average_entitlement_per_person, ",") + " " + eligibility_summary_farmer.entitlement_units
+            number_of_registrants = format(
+                eligibility_summary_farmer.number_of_registrants, ","
+            )
+            total_entitlement_amount = (
+                format(eligibility_summary_farmer.total_entitlement_amount, ",")
+                + " "
+                + eligibility_summary_farmer.entitlement_units
+            )
+            average_entitlement_per_registrant = (
+                format(eligibility_summary_farmer.average_entitlement_per_person, ",")
+                + " "
+                + eligibility_summary_farmer.entitlement_units
+            )
 
         summary = EEESummaryFarmerPayload(
             general_summary=EEEGeneralSummary(
@@ -87,9 +99,11 @@ class EEERegistryFarmer(EEERegistryInterface):
     def get_summary_sync(
         self, pbms_request_id: str, eee_session: Session
     ) -> EEESummaryFarmerPayload:
-        eligibility_summary_farmer = eee_session.query(EEESummaryFarmer).filter_by(
-            pbms_request_id=pbms_request_id
-        ).first()
+        eligibility_summary_farmer = (
+            eee_session.query(EEESummaryFarmer)
+            .filter_by(pbms_request_id=pbms_request_id)
+            .first()
+        )
 
         summary = EEESummaryFarmerPayload(
             general_summary=EEEGeneralSummary(
@@ -141,11 +155,9 @@ class EEERegistryFarmer(EEERegistryInterface):
         page_size=10,
         order_by="id asc",
     ) -> EEEBeneficiarySearchResponsePayload:
-        registrant_details = await (
-            eee_session.execute(
-                select(EEEDetails.registrant_details).where(
-                    EEEDetails.pbms_request_id == pbms_request_id
-                )
+        registrant_details = await eee_session.execute(
+            select(EEEDetails.registrant_details).where(
+                EEEDetails.pbms_request_id == pbms_request_id
             )
         )
         registrant_details = registrant_details.scalars().all()
@@ -256,30 +268,34 @@ class EEERegistryFarmer(EEERegistryInterface):
         # Land Area Summary
         if land_areas:
             land_areas_array = np.array(land_areas)
-            farmer_summary.land_holding_mean = round(float(np.mean(land_areas_array)),2)
-            farmer_summary.land_holding_quartile_25 = round(float(
-                np.percentile(land_areas_array, 25, method="midpoint")
-            ),2)
-            farmer_summary.land_holding_quartile_50 = round(float(
-                np.percentile(land_areas_array, 50, method="midpoint")
-            ), 2)
-            farmer_summary.land_holding_quartile_75 = round(float(
-                np.percentile(land_areas_array, 75, method="midpoint")
-            ),2)
+            farmer_summary.land_holding_mean = round(
+                float(np.mean(land_areas_array)), 2
+            )
+            farmer_summary.land_holding_quartile_25 = round(
+                float(np.percentile(land_areas_array, 25, method="midpoint")), 2
+            )
+            farmer_summary.land_holding_quartile_50 = round(
+                float(np.percentile(land_areas_array, 50, method="midpoint")), 2
+            )
+            farmer_summary.land_holding_quartile_75 = round(
+                float(np.percentile(land_areas_array, 75, method="midpoint")), 2
+            )
 
         # Annual Income Summary
         if annual_incomes:
             annual_incomes_array = np.array(annual_incomes)
-            farmer_summary.annual_income_mean = round(float(np.mean(annual_incomes_array)),2)
-            farmer_summary.annual_income_quartile_25 = round(float(
-                np.percentile(annual_incomes_array, 25, method="midpoint")
-            ),2)
-            farmer_summary.annual_income_quartile_50 = round(float(
-                np.percentile(annual_incomes_array, 50, method="midpoint")
-            ), 2)
-            farmer_summary.annual_income_quartile_75 = round(float(
-                np.percentile(annual_incomes_array, 75, method="midpoint")
-            ),2)
+            farmer_summary.annual_income_mean = round(
+                float(np.mean(annual_incomes_array)), 2
+            )
+            farmer_summary.annual_income_quartile_25 = round(
+                float(np.percentile(annual_incomes_array, 25, method="midpoint")), 2
+            )
+            farmer_summary.annual_income_quartile_50 = round(
+                float(np.percentile(annual_incomes_array, 50, method="midpoint")), 2
+            )
+            farmer_summary.annual_income_quartile_75 = round(
+                float(np.percentile(annual_incomes_array, 75, method="midpoint")), 2
+            )
 
         eee_session.add(farmer_summary)
 
@@ -351,56 +367,62 @@ class EEERegistryFarmer(EEERegistryInterface):
             for registrant_detail in eee_detail.registrant_details:
                 entitlements.append(registrant_detail["entitlement_quantity"])
                 # TODO: single db call to get all registrants stats props
-                registrant_gender = self._get_registrant_gender(registrant_detail["registrant_id"], sr_session)
+                registrant_gender = self._get_registrant_gender(
+                    registrant_detail["registrant_id"], sr_session
+                )
                 if registrant_gender == Gender.MALE.value:
                     entitlements_male.append(registrant_detail["entitlement_quantity"])
                 elif registrant_gender == Gender.FEMALE.value:
-                    entitlements_female.append(registrant_detail["entitlement_quantity"])
+                    entitlements_female.append(
+                        registrant_detail["entitlement_quantity"]
+                    )
                 else:
-                    raise ValueError(f"Invalid gender encountered while processing entitlements: {registrant_gender}")
+                    raise ValueError(
+                        f"Invalid gender encountered while processing entitlements: {registrant_gender}"
+                    )
 
         # Compute entitlement summary statistics
         entitlements_array = np.array(entitlements)
 
         total_entitlement_amount = float(np.sum(entitlements_array))
         average_entitlement_per_person = round(float(np.mean(entitlements_array)), 2)
-        entitlement_amount_q1 = round(float(
-            np.percentile(entitlements_array, 25, method="midpoint")
-        ), 2)
-        entitlement_amount_q2 = round(float(
-            np.percentile(entitlements_array, 50, method="midpoint")
-        ), 2)
-        entitlement_amount_q3 = round(float(
-            np.percentile(entitlements_array, 75, method="midpoint")
-        ), 2)
+        entitlement_amount_q1 = round(
+            float(np.percentile(entitlements_array, 25, method="midpoint")), 2
+        )
+        entitlement_amount_q2 = round(
+            float(np.percentile(entitlements_array, 50, method="midpoint")), 2
+        )
+        entitlement_amount_q3 = round(
+            float(np.percentile(entitlements_array, 75, method="midpoint")), 2
+        )
 
         # Compute statistics for male registrant entitlements
         entitlements_male_array = np.array(entitlements_male)
 
         average_entitlement_male = round(float(np.mean(entitlements_male_array)), 2)
-        entitlement_amount_male_q1 = round(float(
-            np.percentile(entitlements_male_array, 25, method="midpoint")
-        ), 2)
-        entitlement_amount_male_q2 = round(float(
-            np.percentile(entitlements_male_array, 50, method="midpoint")
-        ), 2)
-        entitlement_amount_male_q3 = round(float(
-            np.percentile(entitlements_male_array, 75, method="midpoint")
-        ), 2)
+        entitlement_amount_male_q1 = round(
+            float(np.percentile(entitlements_male_array, 25, method="midpoint")), 2
+        )
+        entitlement_amount_male_q2 = round(
+            float(np.percentile(entitlements_male_array, 50, method="midpoint")), 2
+        )
+        entitlement_amount_male_q3 = round(
+            float(np.percentile(entitlements_male_array, 75, method="midpoint")), 2
+        )
 
         # Compute statistics for female registrant entitlements
         entitlements_female_array = np.array(entitlements_female)
 
         average_entitlement_female = round(float(np.mean(entitlements_female_array)), 2)
-        entitlement_amount_female_q1 = round(float(
-            np.percentile(entitlements_female_array, 25, method="midpoint")
-        ), 2)
-        entitlement_amount_female_q2 = round(float(
-            np.percentile(entitlements_female_array, 50, method="midpoint")
-        ), 2)
-        entitlement_amount_female_q3 = round(float(
-            np.percentile(entitlements_female_array, 75, method="midpoint")
-        ), 2)
+        entitlement_amount_female_q1 = round(
+            float(np.percentile(entitlements_female_array, 25, method="midpoint")), 2
+        )
+        entitlement_amount_female_q2 = round(
+            float(np.percentile(entitlements_female_array, 50, method="midpoint")), 2
+        )
+        entitlement_amount_female_q3 = round(
+            float(np.percentile(entitlements_female_array, 75, method="midpoint")), 2
+        )
 
         # Update g2p_eligibility_summary_farmer record
         eee_session.execute(
@@ -425,5 +447,9 @@ class EEERegistryFarmer(EEERegistryInterface):
 
     # TODO: Modify to get properties for stats from g2p_farmer_registry
     def _get_registrant_gender(self, registrant_id: str, sr_session: Session) -> str:
-        result = sr_session.query(G2PFarmerRegistry.gender).filter_by(unique_id=registrant_id).first()
+        result = (
+            sr_session.query(G2PFarmerRegistry.gender)
+            .filter_by(unique_id=registrant_id)
+            .first()
+        )
         return result[0] if result else None

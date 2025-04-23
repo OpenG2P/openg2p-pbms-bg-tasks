@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime, timedelta
 
@@ -18,7 +17,6 @@ from openg2p_pbms_models.models import (
     G2PProgramDefinition,
     StatusEnum,
 )
-from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
@@ -125,6 +123,7 @@ def create_disbursement_envelope(
         _logger.error(f"Error occurred while calling envelope creation API: {e}")
         return None, str(e)
 
+
 @celery_app.task(name="envelope_creation_request_worker")
 def envelope_creation_request_worker(id: int):
     _logger.info("Starting envelope creation request")
@@ -169,7 +168,11 @@ def envelope_creation_request_worker(id: int):
                 f"Fetching summary for pbms_request_id: {disbursement_cycle.pbms_request_id}"
             )
 
-            eee_summary_payload: EEESummaryPayload = eee_registry_interface.get_summary_sync(disbursement_cycle.pbms_request_id, eee_session)
+            eee_summary_payload: EEESummaryPayload = (
+                eee_registry_interface.get_summary_sync(
+                    disbursement_cycle.pbms_request_id, eee_session
+                )
+            )
 
             if not eee_summary_payload:
                 raise Exception(

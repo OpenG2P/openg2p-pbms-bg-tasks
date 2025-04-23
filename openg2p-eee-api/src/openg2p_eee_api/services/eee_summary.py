@@ -41,7 +41,9 @@ class EEESummaryService(BaseService):
                 )
                 eee_summary: EEESummary = (
                     await summary_computation_interface.get_summary(
-                        eee_summary_request_payload.pbms_request_id, session, formated=True
+                        eee_summary_request_payload.pbms_request_id,
+                        session,
+                        formated=True,
                     )
                 )
                 return eee_summary
