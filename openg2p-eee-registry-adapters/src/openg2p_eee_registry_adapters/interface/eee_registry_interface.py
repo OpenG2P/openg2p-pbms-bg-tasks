@@ -37,7 +37,7 @@ class EEERegistryInterface(ABC):
         raise NotImplementedError("Subclasses must implement get_summary_sync()")
 
     @abstractmethod
-    def get_registrants(self, registrant_ids) -> List[G2PRegistry]:
+    def get_registrants_by_ids(self, registrant_ids) -> List[G2PRegistry]:
         # Abstract method to fetch registrants from the database using session
         raise NotImplementedError("Subclasses must implement get_registrants()")
 

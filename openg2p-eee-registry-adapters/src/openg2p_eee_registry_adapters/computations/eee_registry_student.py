@@ -1,12 +1,16 @@
 import json
 import logging
+from collections import defaultdict
 from datetime import date
 from typing import List
 
 import numpy as np
 from fastapi_cache.decorator import cache
 from openg2p_eee_models.models import EEEDetails
-from openg2p_eee_models.schemas import EEEBeneficiarySearchResponsePayload
+from openg2p_eee_models.schemas import (
+    EEEBeneficiarySearchResponsePayload,
+    RegistrantDetails,
+)
 from openg2p_pbms_models.models import Gender
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -236,7 +240,7 @@ class EEERegistryStudent(EEERegistryInterface):
             for registrant in json.loads(eee_detail["registrant_details"]):
                 registrant_ids.append(registrant["registrant_id"])
 
-            registrants = self.get_registrants(registrant_ids, sr_session)
+            registrants = self.get_registrants_by_ids(registrant_ids, sr_session)
             for student in registrants:
                 students_age.append(self.calculate_age(student.date_of_birth))
 
@@ -264,7 +268,9 @@ class EEERegistryStudent(EEERegistryInterface):
 
         eee_session.add(student_summary)
 
-    def get_registrants(self, registrant_ids, sr_session) -> List[G2PStudentRegistry]:
+    def get_registrants_by_ids(
+        self, registrant_ids, sr_session
+    ) -> List[G2PStudentRegistry]:
         return (
             sr_session.query(G2PStudentRegistry)
             .filter(G2PStudentRegistry.unique_id.in_(registrant_ids))
@@ -283,7 +289,6 @@ class EEERegistryStudent(EEERegistryInterface):
     # =================================
     # Entitlement Celery Worker Methods
     # =================================
-
     def lock_and_update_summary(
         self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
     ) -> None:
@@ -308,7 +313,6 @@ class EEERegistryStudent(EEERegistryInterface):
                 registrant_id, "student", sql_query
             )
         )
-
         result = sr_session.execute(sql_query_with_registrant_id).fetchone()
         return result is not None
 
@@ -333,104 +337,75 @@ class EEERegistryStudent(EEERegistryInterface):
             .all()
         )
 
+        registrant_map: dict[str, G2PStudentRegistry] = defaultdict(list)
+
+        for eee_detail in eee_details:
+            registrant_ids = []
+            for registrant_detail in eee_detail.registrant_details:
+                registrant_detail = RegistrantDetails(**registrant_detail)
+                registrant_ids.append(registrant_detail.registrant_id)
+
+            registrants_list: List[G2PStudentRegistry] = self.get_registrants_by_ids(
+                registrant_ids, sr_session
+            )
+
+            for registrant in registrants_list:
+                registrant_map[str(registrant.unique_id)] = registrant
+
         entitlements = []
         entitlements_male = []
         entitlements_female = []
 
         for eee_detail in eee_details:
             for registrant_detail in eee_detail.registrant_details:
-                entitlements.append(registrant_detail["entitlement_quantity"])
-                if (
-                    self._get_registrant_gender(
-                        registrant_detail["registrant_id"], sr_session
-                    )
-                    == Gender.MALE
-                ):
-                    entitlements_male.append(registrant_detail["entitlement_quantity"])
-                elif (
-                    self._get_registrant_gender(
-                        registrant_detail["registrant_id"], sr_session
-                    )
-                    == Gender.FEMALE
-                ):
-                    entitlements_female.append(
-                        registrant_detail["entitlement_quantity"]
-                    )
+                registrant_detail = RegistrantDetails(**registrant_detail)
+                entitlements.append(registrant_detail.entitlement_quantity)
+
+                registrant = registrant_map.get(str(registrant_detail.registrant_id))
+
+                gender = registrant.gender if registrant else None
+
+                if gender == Gender.MALE.value:
+                    entitlements_male.append(registrant_detail.entitlement_quantity)
+                elif gender == Gender.FEMALE.value:
+                    entitlements_female.append(registrant_detail.entitlement_quantity)
                 else:
-                    raise ValueError(
-                        "Invalid gender encountered while processing entitlements"
-                    )
+                    raise ValueError(f"Invalid gender: {gender}")
 
-        # Compute entitlement summary statistics
-        entitlements_array = np.array(entitlements)
+        # Compute all summary stats
+        entitlement_stats = self.compute_stats(entitlements)
+        entitlement_male_stats = self.compute_stats(entitlements_male)
+        entitlement_female_stats = self.compute_stats(entitlements_female)
 
-        total_entitlement_amount = round(float(np.sum(entitlements_array)), 2)
-        average_entitlement_per_person = round(float(np.mean(entitlements_array)), 2)
-        entitlement_amount_q1 = round(
-            float(np.percentile(entitlements_array, 25, method="midpoint")), 2
-        )
-        entitlement_amount_q2 = round(
-            float(np.percentile(entitlements_array, 50, method="midpoint")), 2
-        )
-        entitlement_amount_q3 = round(
-            float(np.percentile(entitlements_array, 75, method="midpoint")), 2
-        )
-
-        # Compute statistics for male registrant entitlements
-        entitlements_male_array = np.array(entitlements_male)
-
-        total_entitlement_amount = round(float(np.sum(entitlements_male_array)), 2)
-        average_entitlement_male = round(float(np.mean(entitlements_male_array)), 2)
-        entitlement_amount_male_q1 = round(
-            float(np.percentile(entitlements_male_array, 25, method="midpoint")), 2
-        )
-        entitlement_amount_male_q2 = round(
-            float(np.percentile(entitlements_male_array, 50, method="midpoint")), 2
-        )
-        entitlement_amount_male_q3 = round(
-            float(np.percentile(entitlements_male_array, 75, method="midpoint")), 2
-        )
-
-        # Compute statistics for female registrant entitlements
-        entitlements_female_array = np.array(entitlements_female)
-
-        total_entitlement_amount = round(float(np.sum(entitlements_female_array)), 2)
-        average_entitlement_female = round(float(np.mean(entitlements_female_array)), 2)
-        entitlement_amount_female_q1 = round(
-            float(np.percentile(entitlements_female_array, 25, method="midpoint")), 2
-        )
-        entitlement_amount_female_q2 = round(
-            float(np.percentile(entitlements_female_array, 50, method="midpoint")), 2
-        )
-        entitlement_amount_female_q3 = round(
-            float(np.percentile(entitlements_female_array, 75, method="midpoint")), 2
-        )
-
-        # Update g2p_eligibility_summary_farmer record
         eee_session.execute(
             update(EEESummaryStudent)
             .where(EEESummaryStudent.pbms_request_id == pbms_request_id)
             .values(
-                total_entitlement_amount=total_entitlement_amount,
-                average_entitlement_per_person=average_entitlement_per_person,
-                entitlement_amount_q1=entitlement_amount_q1,
-                entitlement_amount_q2=entitlement_amount_q2,
-                entitlement_amount_q3=entitlement_amount_q3,
-                average_entitlement_male=average_entitlement_male,
-                entitlement_amount_male_q1=entitlement_amount_male_q1,
-                entitlement_amount_male_q2=entitlement_amount_male_q2,
-                entitlement_amount_male_q3=entitlement_amount_male_q3,
-                average_entitlement_female=average_entitlement_female,
-                entitlement_amount_female_q1=entitlement_amount_female_q1,
-                entitlement_amount_female_q2=entitlement_amount_female_q2,
-                entitlement_amount_female_q3=entitlement_amount_female_q3,
+                total_entitlement_amount=entitlement_stats["total"],
+                average_entitlement_per_person=entitlement_stats["average"],
+                entitlement_amount_q1=entitlement_stats["q1"],
+                entitlement_amount_q2=entitlement_stats["q2"],
+                entitlement_amount_q3=entitlement_stats["q3"],
+                average_entitlement_male=entitlement_male_stats["average"],
+                entitlement_amount_male_q1=entitlement_male_stats["q1"],
+                entitlement_amount_male_q2=entitlement_male_stats["q2"],
+                entitlement_amount_male_q3=entitlement_male_stats["q3"],
+                average_entitlement_female=entitlement_female_stats["average"],
+                entitlement_amount_female_q1=entitlement_female_stats["q1"],
+                entitlement_amount_female_q2=entitlement_female_stats["q2"],
+                entitlement_amount_female_q3=entitlement_female_stats["q3"],
             )
         )
 
-    def _get_registrant_gender(self, registrant_id: str, sr_session: Session) -> str:
-        result = (
-            sr_session.query(G2PStudentRegistry.gender)
-            .filter_by(unique_id=registrant_id)
-            .first()
-        )
-        return result[0] if result else None
+    def compute_stats(self, input_list: List[float]) -> dict:
+        if not input_list:
+            return {"average": 0.0, "q1": 0.0, "q2": 0.0, "q3": 0.0, "total": 0.0}
+
+        arr = np.array(input_list)
+        return {
+            "average": round(float(np.mean(arr)), 2),
+            "q1": round(float(np.percentile(arr, 25, method="midpoint")), 2),
+            "q2": round(float(np.percentile(arr, 50, method="midpoint")), 2),
+            "q3": round(float(np.percentile(arr, 75, method="midpoint")), 2),
+            "total": float(np.sum(arr)),
+        }
