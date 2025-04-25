@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import requests
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
@@ -12,7 +12,7 @@ from openg2p_g2p_bridge_models.schemas import (
 )
 from openg2p_g2pconnect_common_lib.schemas import RequestHeader
 from openg2p_pbms_models.models import (
-    G2PDeliveryCodes,
+    G2PBenefitCodes,
     G2PDisbursementCycle,
     G2PProgramDefinition,
     StatusEnum,
@@ -34,10 +34,10 @@ def create_disbursement_envelope(
     eee_summary_payload: EEESummaryPayload,
     pbms_session,
 ):
-    delivery_code: G2PDeliveryCodes = (
-        pbms_session.query(G2PDeliveryCodes)
+    benefit_code: G2PBenefitCodes = (
+        pbms_session.query(G2PBenefitCodes)
         .filter(
-            G2PDeliveryCodes.id == program_definition.delivery_id,
+            G2PBenefitCodes.id == program_definition.benefit_code_id,
         )
         .first()
     )
@@ -50,7 +50,7 @@ def create_disbursement_envelope(
         total_disbursement_amount=eee_summary_payload.general_summary.total_entitlement_amount,
         disbursement_schedule_date=disbursement_cycle.disbursement_schedule_date,
         disbursement_frequency=program_definition.disbursement_frequency.value,
-        disbursement_currency_code=delivery_code.measurement_unit,  # TODO Add a separate unit for currency ISO
+        disbursement_currency_code=benefit_code.measurement_unit,  # TODO Add a separate unit for currency ISO
     )
 
     disbursement_envelope_request_header = RequestHeader(
@@ -73,20 +73,12 @@ def create_disbursement_envelope(
     disbursement_envelope_request_json = disbursement_envelope_request.model_dump(
         mode="json"
     )
-    disbursement_envelope_request_json.update(
-        {
-            "iss": _config.issuer,
-            "aud": _config.audience,
-            "iat": datetime.now(),
-            "exp": datetime.now() + timedelta(minutes=5),
-        }
-    )
     _logger.debug(
         f"Disbursement Envelope Request: {disbursement_envelope_request_json}"
     )
 
     envelope_creation_url = _config.g2p_bridge_envelope_creation_url
-    _logger.debug(f"Envelope Creation URL: {envelope_creation_url}")
+    _logger.info(f"Envelope Creation URL: {envelope_creation_url}")
 
     jwt_token = create_jwt_token(
         disbursement_envelope_request_json, _config.private_key

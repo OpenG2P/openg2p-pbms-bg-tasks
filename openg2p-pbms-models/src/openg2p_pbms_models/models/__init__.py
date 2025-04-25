@@ -1,5 +1,5 @@
 from .base import BaseORMModel
-from .delivery_codes import G2PDeliveryCodes
+from .benefit_codes import G2PBenefitCodes
 from .disbursement_cycle import G2PDisbursementCycle
 from .eligibility_rule_definition import G2PEligibilityRuleDefinition
 from .entitlement_rule_definition import G2PEntitlementRuleDefinition
