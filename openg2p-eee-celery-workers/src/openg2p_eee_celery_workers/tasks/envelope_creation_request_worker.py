@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import requests
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
@@ -72,14 +72,6 @@ def create_disbursement_envelope(
     )
     disbursement_envelope_request_json = disbursement_envelope_request.model_dump(
         mode="json"
-    )
-    disbursement_envelope_request_json.update(
-        {
-            "iss": _config.issuer,
-            "aud": _config.audience,
-            "iat": datetime.now(),
-            "exp": datetime.now() + timedelta(minutes=5),
-        }
     )
     _logger.debug(
         f"Disbursement Envelope Request: {disbursement_envelope_request_json}"
@@ -212,7 +204,6 @@ def envelope_creation_request_worker(id: int):
             _logger.error(
                 f"Exception occurred while processing envelope creation request: {e}"
             )
-            raise e
             if disbursement_cycle:
                 disbursement_cycle.envelope_creation_attempts += 1
                 disbursement_cycle.envelope_creation_latest_error_code = str(e)
