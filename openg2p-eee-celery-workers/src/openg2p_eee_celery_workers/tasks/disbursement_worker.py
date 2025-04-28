@@ -73,7 +73,7 @@ def create_disbursement(
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": jwt_token,
+            "Signature": jwt_token,
         }
         _logger.info(
             f"Calling disbursement creation endpoint for disbursement batch id {disbursement_batch.id} having {len(registrant_details)} beneficiaries"

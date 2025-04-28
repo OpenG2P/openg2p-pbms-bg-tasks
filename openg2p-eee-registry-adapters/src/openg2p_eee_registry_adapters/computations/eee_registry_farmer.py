@@ -327,9 +327,8 @@ class EEERegistryFarmer(EEERegistryInterface):
             )
             summary_farmer.number_of_entitlements_processed += number_of_registrants
             eee_session.commit()
-        except Exception as e:
+        except Exception as _:
             eee_session.rollback()
-            raise e
 
     def get_is_registant_entitled(
         self, registrant_id: str, sql_query: str, sr_session: Session
