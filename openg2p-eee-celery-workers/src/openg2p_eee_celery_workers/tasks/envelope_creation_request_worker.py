@@ -87,7 +87,7 @@ def create_disbursement_envelope(
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": jwt_token,
+        "Signature": jwt_token,
     }
 
     _logger.info(

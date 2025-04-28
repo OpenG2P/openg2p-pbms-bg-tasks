@@ -174,7 +174,6 @@ def entitlement_request_worker(id: int):
         except Exception as e:
             error_message = f"Error during processing entitlement request for queue id {id}: {str(e)}"
             _logger.error(error_message)
-            raise e
             if g2p_que_eee_request:
                 g2p_que_eee_request.processed_date = datetime.now(timezone.utc)
                 # queue_entry.task_status = StatusEnum.FAILED
