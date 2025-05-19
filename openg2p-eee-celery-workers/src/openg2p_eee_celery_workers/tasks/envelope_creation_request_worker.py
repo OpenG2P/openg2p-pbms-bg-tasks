@@ -1,6 +1,5 @@
-import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import requests
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
@@ -13,12 +12,11 @@ from openg2p_g2p_bridge_models.schemas import (
 )
 from openg2p_g2pconnect_common_lib.schemas import RequestHeader
 from openg2p_pbms_models.models import (
-    G2PDeliveryCodes,
+    G2PBenefitCodes,
     G2PDisbursementCycle,
     G2PProgramDefinition,
     StatusEnum,
 )
-from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
@@ -36,10 +34,10 @@ def create_disbursement_envelope(
     eee_summary_payload: EEESummaryPayload,
     pbms_session,
 ):
-    delivery_code: G2PDeliveryCodes = (
-        pbms_session.query(G2PDeliveryCodes)
+    benefit_code: G2PBenefitCodes = (
+        pbms_session.query(G2PBenefitCodes)
         .filter(
-            G2PDeliveryCodes.id == program_definition.delivery_id,
+            G2PBenefitCodes.id == program_definition.benefit_code_id,
         )
         .first()
     )
@@ -52,7 +50,7 @@ def create_disbursement_envelope(
         total_disbursement_amount=eee_summary_payload.general_summary.total_entitlement_amount,
         disbursement_schedule_date=disbursement_cycle.disbursement_schedule_date,
         disbursement_frequency=program_definition.disbursement_frequency.value,
-        disbursement_currency_code=delivery_code.measurement_unit,  # TODO Add a separate unit for currency ISO
+        disbursement_currency_code=benefit_code.measurement_unit,  # TODO Add a separate unit for currency ISO
     )
 
     disbursement_envelope_request_header = RequestHeader(
@@ -75,20 +73,12 @@ def create_disbursement_envelope(
     disbursement_envelope_request_json = disbursement_envelope_request.model_dump(
         mode="json"
     )
-    disbursement_envelope_request_json.update(
-        {
-            "iss": _config.issuer,
-            "aud": _config.audience,
-            "iat": datetime.now(),
-            "exp": datetime.now() + timedelta(minutes=5),
-        }
-    )
     _logger.debug(
         f"Disbursement Envelope Request: {disbursement_envelope_request_json}"
     )
 
     envelope_creation_url = _config.g2p_bridge_envelope_creation_url
-    _logger.debug(f"Envelope Creation URL: {envelope_creation_url}")
+    _logger.info(f"Envelope Creation URL: {envelope_creation_url}")
 
     jwt_token = create_jwt_token(
         disbursement_envelope_request_json, _config.private_key
@@ -97,7 +87,7 @@ def create_disbursement_envelope(
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": jwt_token,
+        "Signature": jwt_token,
     }
 
     _logger.info(
@@ -126,22 +116,17 @@ def create_disbursement_envelope(
         return None, str(e)
 
 
-async def fetch_eee_summary(eee_registry_interface, pbms_request_id, eee_session_maker):
-    async with eee_session_maker() as eee_session:
-        return await eee_registry_interface.get_summary(pbms_request_id, eee_session)
-
-
 @celery_app.task(name="envelope_creation_request_worker")
 def envelope_creation_request_worker(id: int):
     _logger.info("Starting envelope creation request")
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
-    eee_session_maker = async_sessionmaker(
-        bind=_engine.get("db_engine_eee_async"), expire_on_commit=False
+    eee_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_eee"), expire_on_commit=False
     )
 
-    with pbms_session_maker() as pbms_session:
+    with pbms_session_maker() as pbms_session, eee_session_maker() as eee_session:
         disbursement_cycle = None
         try:
             # Fetch the queue entry from pbms db using id
@@ -175,12 +160,9 @@ def envelope_creation_request_worker(id: int):
                 f"Fetching summary for pbms_request_id: {disbursement_cycle.pbms_request_id}"
             )
 
-            # Fetch the eee summary from eee db using pbms_request_id based on target_registry_type
-            eee_summary_payload: EEESummaryPayload = asyncio.run(
-                fetch_eee_summary(
-                    eee_registry_interface,
-                    disbursement_cycle.pbms_request_id,
-                    eee_session_maker,
+            eee_summary_payload: EEESummaryPayload = (
+                eee_registry_interface.get_summary_sync(
+                    disbursement_cycle.pbms_request_id, eee_session
                 )
             )
 

@@ -56,7 +56,6 @@ class EEEBeneficiarySearchService(BaseService):
 
             except Exception as e:
                 _logger.error(f"Error fetching eligibility summary : {e}")
-                raise e
 
     async def construct_beneficiary_search_success_response(
         self,

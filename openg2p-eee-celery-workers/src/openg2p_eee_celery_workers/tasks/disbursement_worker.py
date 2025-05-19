@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List
 
 import requests
@@ -63,14 +63,6 @@ def create_disbursement(
             header=disbursement_header, message=disbursement_payloads
         )
         disbursement_request_json = disbursement_request.model_dump(mode="json")
-        disbursement_request_json.update(
-            {
-                "iss": _config.issuer,
-                "aud": _config.audience,
-                "iat": datetime.now(),
-                "exp": datetime.now() + timedelta(minutes=5),
-            }
-        )
         _logger.debug(f"Disbursement request payload: {disbursement_request_json}")
 
         disbursement_url = _config.g2p_bridge_disbursement_url
@@ -81,7 +73,7 @@ def create_disbursement(
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": jwt_token,
+            "Signature": jwt_token,
         }
         _logger.info(
             f"Calling disbursement creation endpoint for disbursement batch id {disbursement_batch.id} having {len(registrant_details)} beneficiaries"

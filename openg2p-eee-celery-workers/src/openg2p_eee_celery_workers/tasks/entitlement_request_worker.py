@@ -151,7 +151,7 @@ def entitlement_request_worker(id: int):
 
                 # Compute summary and add to session
                 eee_registry_interface.compute_entitlements_and_modify_summary(
-                    eee_details.pbms_request_id, eee_session
+                    eee_details.pbms_request_id, eee_session, sr_session
                 )
 
                 _logger.info(
@@ -174,7 +174,6 @@ def entitlement_request_worker(id: int):
         except Exception as e:
             error_message = f"Error during processing entitlement request for queue id {id}: {str(e)}"
             _logger.error(error_message)
-            raise e
             if g2p_que_eee_request:
                 g2p_que_eee_request.processed_date = datetime.now(timezone.utc)
                 # queue_entry.task_status = StatusEnum.FAILED
