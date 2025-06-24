@@ -9,10 +9,10 @@ def init_cache():
 # Custom key builder function
 def beneficiary_count_key_builder(func, namespace: str, *args, **kwargs):
     """
-    Build a custom cache key with `pbms_request_id` and `search_query`.
+    Build a custom cache key with `beneficiary_list_id` and `search_query`.
     """
     args: list = kwargs.get("args")
-    pbms_request_id: str = args[2]
+    beneficiary_list_id: str = args[2]
     search_query: str = args[4]
 
-    return f"{namespace}{pbms_request_id}{search_query}"
+    return f"{namespace}{beneficiary_list_id}{search_query}"
