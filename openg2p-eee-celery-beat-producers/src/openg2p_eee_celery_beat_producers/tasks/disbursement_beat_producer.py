@@ -29,7 +29,7 @@ def disbursement_beat_producer():
                 .filter(
                     DisbursementBatch.disbursement_status == StatusEnum.PENDING.value
                 )
-                .limit(_config.batch_size)  # TODO: Change this
+                .limit(_config.batch_size)
             )
             .scalars()
             .all()
@@ -38,24 +38,24 @@ def disbursement_beat_producer():
             f"Found {len(disbursement_batches)} pending disbursement batch requests"
         )
 
-        for batch in disbursement_batches:
-            _logger.info(f"Queueing Disbursement Batch ID: {batch.id}")
+        for disbursement_batch in disbursement_batches:
+            _logger.info(f"Queueing Disbursement Batch ID: {disbursement_batch.id}")
 
             # Update the status to PROCESSING
-            batch.disbursement_status = StatusEnum.PROCESSING.value
+            disbursement_batch.disbursement_status = StatusEnum.PROCESSING.value
             _logger.info(
-                f"Updating status for Disbursement Batch ID: {batch.id} to PROCESSING"
+                f"Updating status for Disbursement Batch ID: {disbursement_batch.id} to PROCESSING"
             )
             eee_session.commit()
             worker_type = WorkerTypes.DISBURSEMENT_WORKER
             # Send task to the appropriate celery worker
             celery_app.send_task(
                 worker_type,
-                args=(batch.id,),
+                args=(disbursement_batch.id,),
                 queue=_config.eee_task_worker_queue,
             )
             _logger.info(
-                f"Sent task to disbursement_status_worker for Disbursement Batch ID: {batch.id}"
+                f"Sent task to disbursement_status_worker for Disbursement Batch ID: {disbursement_batch.id}"
             )
 
     _logger.info("Completed processing pending Disbursement Batch requests")
