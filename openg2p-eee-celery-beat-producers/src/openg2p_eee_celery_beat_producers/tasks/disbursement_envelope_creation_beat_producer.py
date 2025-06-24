@@ -1,8 +1,12 @@
 import logging
-from typing import List
 
-from openg2p_pbms_models.models import G2PBeneficiaryList, StatusEnum, ListWorkflowStatusEnum, ListStageEnum
-from sqlalchemy import select, and_
+from openg2p_pbms_models.models import (
+    G2PBeneficiaryList,
+    ListStageEnum,
+    ListWorkflowStatusEnum,
+    StatusEnum,
+)
+from sqlalchemy import and_, select
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
@@ -12,6 +16,7 @@ from .worker_types import WorkerTypes
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
 _engine = get_engine()
+
 
 @celery_app.task(name="disbursement_envelope_creation_beat_producer")
 def disbursement_envelope_creation_beat_producer():
@@ -26,14 +31,20 @@ def disbursement_envelope_creation_beat_producer():
                 select(G2PBeneficiaryList)
                 .where(
                     and_(
-                        G2PBeneficiaryList.list_workflow_status == ListWorkflowStatusEnum.APPROVED_FOR_DISBURSEMENT.value,
-                        G2PBeneficiaryList.list_stage == ListStageEnum.DISBURSEMENT.value,
-                        G2PBeneficiaryList.entitlement_process_status == StatusEnum.COMPLETE.value,
-                        G2PBeneficiaryList.disbursement_envelope_status == StatusEnum.PENDING.value,
+                        G2PBeneficiaryList.list_workflow_status
+                        == ListWorkflowStatusEnum.APPROVED_FOR_DISBURSEMENT.value,
+                        G2PBeneficiaryList.list_stage
+                        == ListStageEnum.DISBURSEMENT.value,
+                        G2PBeneficiaryList.entitlement_process_status
+                        == StatusEnum.COMPLETE.value,
+                        G2PBeneficiaryList.disbursement_envelope_status
+                        == StatusEnum.PENDING.value,
                     )
                 )
                 .limit(_config.batch_size)
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
 
         for beneficiary_list in beneficiary_lists:
@@ -51,4 +62,6 @@ def disbursement_envelope_creation_beat_producer():
                 f"Sent task to {worker_type} for Beneficiary List ID: {beneficiary_list.id}"
             )
 
-    _logger.info("Completed processing pending disbursement enevelope creation requests")
+    _logger.info(
+        "Completed processing pending disbursement enevelope creation requests"
+    )

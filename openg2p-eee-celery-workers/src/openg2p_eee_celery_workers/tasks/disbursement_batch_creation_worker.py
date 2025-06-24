@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 
 from openg2p_eee_models.models import (
     BeneficiaryListDetails,
@@ -11,7 +10,6 @@ from openg2p_pbms_models.models import (
     G2PBeneficiaryList,
     StatusEnum,
 )
-from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
@@ -24,7 +22,9 @@ _engine = get_engine()
 
 @celery_app.task(name="disbursement_batch_creation_worker")
 def disbursement_batch_creation_worker(id: int):
-    _logger.info(f"Starting disbursment batch creation request for benefiicary list id: {id}")
+    _logger.info(
+        f"Starting disbursment batch creation request for benefiicary list id: {id}"
+    )
 
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
@@ -49,18 +49,28 @@ def disbursement_batch_creation_worker(id: int):
             # Get all BeneficiaryListDetails rows for the given beneficiary_list_id
             beneficiary_list_details = (
                 eee_session.query(BeneficiaryListDetails)
-                .filter(BeneficiaryListDetails.beneficiary_list_id == beneficiary_list.beneficiary_list_id)
+                .filter(
+                    BeneficiaryListDetails.beneficiary_list_id
+                    == beneficiary_list.beneficiary_list_id
+                )
                 .all()
             )
             # Get all DisbursementEnvelope rows for the given beneficiary_list_id
             disbursement_envelopes = (
                 eee_session.query(DisbursementEnvelope)
-                .filter(DisbursementEnvelope.beneficiary_list_id == beneficiary_list.beneficiary_list_id)
+                .filter(
+                    DisbursementEnvelope.beneficiary_list_id
+                    == beneficiary_list.beneficiary_list_id
+                )
                 .all()
             )
 
-            _logger.info(f"Total detail batches fetched from BeneficiaryListDetails: {len(beneficiary_list_details)}")
-            _logger.info(f"Total disbursement envelopes fetched from BeneficiaryListDetails: {len(disbursement_envelopes)}")
+            _logger.info(
+                f"Total detail batches fetched from BeneficiaryListDetails: {len(beneficiary_list_details)}"
+            )
+            _logger.info(
+                f"Total disbursement envelopes fetched from BeneficiaryListDetails: {len(disbursement_envelopes)}"
+            )
 
             disbursement_batches = []
             for disbursement_envelope in disbursement_envelopes:
@@ -72,17 +82,19 @@ def disbursement_batch_creation_worker(id: int):
                         registrant_detail = RegistrantDetails(**registrant_detail)
                         disbursement = Disbursement(
                             beneficiary_id=registrant_detail.registrant_id,
-                            entitlement=registrant_detail.entitlement[disbursement_envelope.benefit_code_id]
+                            entitlement=registrant_detail.entitlement[
+                                disbursement_envelope.benefit_code_id
+                            ],
                         )
                         disbursements.append(disbursement.model_dump(mode="json"))
                         print(disbursements)
 
                     disbursement_batch = DisbursementBatch(
-                        disbursements = disbursements,
-                        disbursement_envelope_id = disbursement_envelope.disbursement_envelope_id,
-                        disbursement_cycle_id = disbursement_envelope.disbursement_cycle_id,
-                        beneficiary_list_details_id = beneficiary_list_detail.id,
-                        beneficiary_list_id=beneficiary_list.id
+                        disbursements=disbursements,
+                        disbursement_envelope_id=disbursement_envelope.disbursement_envelope_id,
+                        disbursement_cycle_id=disbursement_envelope.disbursement_cycle_id,
+                        beneficiary_list_details_id=beneficiary_list_detail.id,
+                        beneficiary_list_id=beneficiary_list.id,
                     )
                     disbursement_batches.append(disbursement_batch)
 
@@ -96,7 +108,9 @@ def disbursement_batch_creation_worker(id: int):
                 f"Disbursement batch records created successfully for beneficiary list id: {id}"
             )
 
-            beneficiary_list.disbursement_batch_creation_status = StatusEnum.COMPLETE.value
+            beneficiary_list.disbursement_batch_creation_status = (
+                StatusEnum.COMPLETE.value
+            )
             _logger.info(
                 f"Compelted processing disbursement batch creation for beneficiary list id: {id}"
             )

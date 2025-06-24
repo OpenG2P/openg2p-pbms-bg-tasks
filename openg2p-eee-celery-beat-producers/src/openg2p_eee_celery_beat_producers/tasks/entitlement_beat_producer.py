@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 from openg2p_eee_models.models import BeneficiaryListDetails
-from openg2p_pbms_models.models import G2PBeneficiaryList, ListStageEnum, StatusEnum
+from openg2p_pbms_models.models import StatusEnum
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -17,14 +17,16 @@ _engine = get_engine()
 
 @celery_app.task(name="entitlement_beat_producer")
 def entitlement_beat_producer():
-    _logger.info("Checking for pending EEE entitlement requests in BeneficiaryListDetails")
+    _logger.info(
+        "Checking for pending EEE entitlement requests in BeneficiaryListDetails"
+    )
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
     eee_session_maker = sessionmaker(
         bind=_engine.get("db_engine_eee"), expire_on_commit=False
     )
-    with eee_session_maker() as eee_session, pbms_session_maker() as pbms_session:
+    with eee_session_maker() as eee_session, pbms_session_maker():
         # # Fetch beneficiary_list with PENDING entitlement status
         # beneficiary_list: G2PBeneficiaryList = (
         #     pbms_session.execute(
@@ -42,17 +44,22 @@ def entitlement_beat_producer():
                 select(BeneficiaryListDetails)
                 .filter(
                     # BeneficiaryListDetails.beneficiary_list_id == beneficiary_list.beneficiary_list_id,
-                    BeneficiaryListDetails.entitlement_status == StatusEnum.PENDING.value
+                    BeneficiaryListDetails.entitlement_status
+                    == StatusEnum.PENDING.value
                 )
                 .limit(_config.batch_size)
             )
             .scalars()
             .all()
         )
-        _logger.info(f"Found {len(beneficiary_list_details)} pending entitlement requests")
+        _logger.info(
+            f"Found {len(beneficiary_list_details)} pending entitlement requests"
+        )
 
         for beneficiary_list_detail in beneficiary_list_details:
-            _logger.info(f"Queueing EEE entitlement request ID: {beneficiary_list_detail.id}")
+            _logger.info(
+                f"Queueing EEE entitlement request ID: {beneficiary_list_detail.id}"
+            )
 
             beneficiary_list_detail.entitlement_status = StatusEnum.PROCESSING.value
             eee_session.add(beneficiary_list_detail)

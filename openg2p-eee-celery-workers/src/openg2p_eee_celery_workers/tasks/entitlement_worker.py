@@ -1,19 +1,17 @@
+import json
 import logging
 from datetime import datetime, timezone
 from typing import List
-import json
 
 from openg2p_eee_models.models import BeneficiaryListDetails
 from openg2p_eee_models.schemas import RegistrantDetails
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
 from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_pbms_models.models import (
+    G2PBeneficiaryList,
     G2PEntitlementRuleDefinition,
     G2PProgramDefinition,
-    G2PBeneficiaryList,
     StatusEnum,
-    ListStageEnum,
-    ListWorkflowStatusEnum,
 )
 from sqlalchemy.orm import sessionmaker
 
@@ -43,7 +41,9 @@ def entitlement_worker(id: int):
         try:
             # Fetch the beneficiary list entry from pbms db using id
             beneficiary_list_details = (
-                eee_session.query(BeneficiaryListDetails).filter(BeneficiaryListDetails.id == id).first()
+                eee_session.query(BeneficiaryListDetails)
+                .filter(BeneficiaryListDetails.id == id)
+                .first()
             )
             if not beneficiary_list_details:
                 _logger.error(f"No BeneficiaryListDetails entry found for id: {id}")
@@ -51,7 +51,10 @@ def entitlement_worker(id: int):
 
             beneficiary_list = (
                 pbms_session.query(G2PBeneficiaryList)
-                .filter(G2PBeneficiaryList.beneficiary_list_id == beneficiary_list_details.beneficiary_list_id)
+                .filter(
+                    G2PBeneficiaryList.beneficiary_list_id
+                    == beneficiary_list_details.beneficiary_list_id
+                )
                 .first()
             )
             if not beneficiary_list:
@@ -61,9 +64,7 @@ def entitlement_worker(id: int):
                 return
 
             target_registry_type = (
-                pbms_session.query(
-                    G2PProgramDefinition.target_registry_type
-                )
+                pbms_session.query(G2PProgramDefinition.target_registry_type)
                 .filter(G2PProgramDefinition.id == beneficiary_list.program_id)
                 .one_or_none()
             )
@@ -81,8 +82,9 @@ def entitlement_worker(id: int):
 
             registrant_details_list: List[RegistrantDetails] = []
 
-            for registrant_detail in json.loads(beneficiary_list_details.registrant_details):
-
+            for registrant_detail in json.loads(
+                beneficiary_list_details.registrant_details
+            ):
                 registrant_details = RegistrantDetails(**registrant_detail)
 
                 for entitlement_rule_definition in entitlement_rule_definitions:
@@ -90,7 +92,8 @@ def entitlement_worker(id: int):
                     if (
                         registrant_details.entitlement is not None
                         and benefit_code_id in registrant_details.entitlement
-                        and registrant_details.entitlement[benefit_code_id] == entitlement_rule_definition.max_quantity
+                        and registrant_details.entitlement[benefit_code_id]
+                        == entitlement_rule_definition.max_quantity
                     ):
                         continue
                     else:
@@ -108,29 +111,53 @@ def entitlement_worker(id: int):
                                 )
                             )
                             if is_registrant_entitled:
-                                multiplier: int = eee_registry_interface.get_entitlement_multiplier(
-                                    entitlement_rule_definition.multiplier,
-                                    registrant_details.registrant_id,
-                                    sr_session,
+                                multiplier: int = (
+                                    eee_registry_interface.get_entitlement_multiplier(
+                                        entitlement_rule_definition.multiplier,
+                                        registrant_details.registrant_id,
+                                        sr_session,
+                                    )
                                 )
-                                calculated_entitlement = multiplier * entitlement_rule_definition.quantity
-                                _logger.info(f"calculated entitlement: {calculated_entitlement}")
+                                calculated_entitlement = (
+                                    multiplier * entitlement_rule_definition.quantity
+                                )
+                                _logger.info(
+                                    f"calculated entitlement: {calculated_entitlement}"
+                                )
 
                                 if benefit_code_id in registrant_details.entitlement:
                                     _logger.info(f"benefit code id: {benefit_code_id}")
-                                    _logger.info(f"entitlement: {registrant_details.entitlement}")
-                                    existing_entitlement = registrant_details.entitlement[benefit_code_id]
+                                    _logger.info(
+                                        f"entitlement: {registrant_details.entitlement}"
+                                    )
+                                    existing_entitlement = (
+                                        registrant_details.entitlement[benefit_code_id]
+                                    )
                                     if entitlement_rule_definition.max_quantity == 0:
-                                        addl_entitlement = existing_entitlement + calculated_entitlement
+                                        addl_entitlement = (
+                                            existing_entitlement
+                                            + calculated_entitlement
+                                        )
                                     else:
-                                        addl_entitlement = min(existing_entitlement + calculated_entitlement, entitlement_rule_definition.max_quantity)
-                                    registrant_details.entitlement[benefit_code_id] = addl_entitlement
+                                        addl_entitlement = min(
+                                            existing_entitlement
+                                            + calculated_entitlement,
+                                            entitlement_rule_definition.max_quantity,
+                                        )
+                                    registrant_details.entitlement[
+                                        benefit_code_id
+                                    ] = addl_entitlement
                                 else:
                                     if entitlement_rule_definition.max_quantity == 0:
                                         addl_entitlement = calculated_entitlement
                                     else:
-                                        addl_entitlement = min(calculated_entitlement, entitlement_rule_definition.max_quantity)
-                                    registrant_details.entitlement[benefit_code_id] = addl_entitlement
+                                        addl_entitlement = min(
+                                            calculated_entitlement,
+                                            entitlement_rule_definition.max_quantity,
+                                        )
+                                    registrant_details.entitlement[
+                                        benefit_code_id
+                                    ] = addl_entitlement
 
                         except Exception as e:
                             _logger.error(
@@ -171,7 +198,9 @@ def entitlement_worker(id: int):
 
                 # Compute summary and add to session
                 eee_registry_interface.compute_entitlements_and_modify_summary(
-                    beneficiary_list_details.beneficiary_list_id, eee_session, sr_session
+                    beneficiary_list_details.beneficiary_list_id,
+                    eee_session,
+                    sr_session,
                 )
 
                 _logger.info(
@@ -199,4 +228,6 @@ def entitlement_worker(id: int):
                 # queue_entry.task_status = StatusEnum.FAILED
                 pbms_session.commit()
 
-        _logger.info(f"Completed processing entitlement request for beneficiary list id: {id}")
+        _logger.info(
+            f"Completed processing entitlement request for beneficiary list id: {id}"
+        )

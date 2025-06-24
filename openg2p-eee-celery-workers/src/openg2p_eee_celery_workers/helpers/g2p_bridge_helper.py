@@ -1,16 +1,13 @@
-import json
-
 import requests
 from openg2p_eee_models.schemas import Disbursement
 from openg2p_g2p_bridge_models.schemas import (
-    DisbursementEnvelopePayload,
     DisbursementEnvelopeRequest,
     DisbursementEnvelopeResponse,
     DisbursementPayload,
     DisbursementRequest,
     DisbursementResponse,
 )
-from openg2p_g2pconnect_common_lib.schemas import RequestHeader, SyncResponseHeader
+from openg2p_g2pconnect_common_lib.schemas import RequestHeader
 
 
 class G2PBridgeDisbursementHelper:
@@ -36,7 +33,8 @@ class G2PBridgeDisbursementHelper:
             meta="string",
         )
         disbursement_envelope_request = DisbursementEnvelopeRequest(
-            header=disbursement_envelope_request_header, message=disbursement_envelope_request_message
+            header=disbursement_envelope_request_header,
+            message=disbursement_envelope_request_message,
         )
         disbursement_envelope_request_json = disbursement_envelope_request.model_dump(
             mode="json"
@@ -65,16 +63,17 @@ class G2PBridgeDisbursementHelper:
             )
             response.raise_for_status()
 
-            envelope_response = DisbursementEnvelopeResponse.model_validate(response.json())
-            self._logger.debug(
-                f"Response: {envelope_response}"
+            envelope_response = DisbursementEnvelopeResponse.model_validate(
+                response.json()
             )
+            self._logger.debug(f"Response: {envelope_response}")
 
             return envelope_response, None
 
-
         except Exception as e:
-            self._logger.error(f"Error occurred while calling envelope creation API: {e}")
+            self._logger.error(
+                f"Error occurred while calling envelope creation API: {e}"
+            )
             return None, str(e)
 
     def create_disbursement(self, disbursement_batch, eee_session, narrative):
@@ -114,12 +113,16 @@ class G2PBridgeDisbursementHelper:
                 header=disbursement_header, message=disbursement_payloads
             )
             disbursement_request_json = disbursement_request.model_dump(mode="json")
-            self._logger.debug(f"Disbursement request payload: {disbursement_request_json}")
+            self._logger.debug(
+                f"Disbursement request payload: {disbursement_request_json}"
+            )
 
             disbursement_url = self._config.g2p_bridge_disbursement_url
             self._logger.debug(f"Disbursement URL: {disbursement_url}")
 
-            jwt_token = self._create_jwt_token(disbursement_request_json, self._config.private_key)
+            jwt_token = self._create_jwt_token(
+                disbursement_request_json, self._config.private_key
+            )
 
             headers = {
                 "Accept": "application/json",

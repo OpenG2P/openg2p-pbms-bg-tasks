@@ -2,18 +2,18 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from openg2p_eee_models.models import BeneficiaryListSummary, BeneficiaryListDetails
+from openg2p_eee_models.models import BeneficiaryListDetails, BeneficiaryListSummary
 from openg2p_eee_models.schemas import RegistrantDetails
 from openg2p_eee_registry_adapters.factory import EEERegistryFactory
 from openg2p_eee_registry_adapters.interface import EEERegistryInterface
 from openg2p_pbms_models.models import (
-    G2PEligibilityRuleDefinition,
-    G2PProgramDefinition,
-    G2PPriorityRuleDefinition,
     G2PBeneficiaryList,
-    StatusEnum,
+    G2PEligibilityRuleDefinition,
+    G2PPriorityRuleDefinition,
+    G2PProgramDefinition,
     ListStageEnum,
     ListWorkflowStatusEnum,
+    StatusEnum,
 )
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
@@ -21,9 +21,8 @@ from sqlalchemy.orm import sessionmaker
 from ..app import celery_app, get_engine
 from ..config import Settings
 from ..helpers import (
-    construct_priority_query,
     construct_eligibility_query,
-    persist_beneficiary_list_details,
+    construct_priority_query,
 )
 
 _config = Settings.get_config()
@@ -87,7 +86,8 @@ def beneficiary_list_worker(id: int):
                     .filter(
                         G2PBeneficiaryList.program_id == beneficiary_list.program_id,
                         G2PBeneficiaryList.list_stage == ListStageEnum.ENROLLMENT.value,
-                        G2PBeneficiaryList.list_workflow_status == ListWorkflowStatusEnum.APPROVED_FINAL_ENROLMENT.value,
+                        G2PBeneficiaryList.list_workflow_status
+                        == ListWorkflowStatusEnum.APPROVED_FINAL_ENROLMENT.value,
                     )
                     .order_by(G2PBeneficiaryList.creation_date.desc())
                     .scalar()
@@ -118,7 +118,9 @@ def beneficiary_list_worker(id: int):
                             details_list = json.loads(approved_registrant_detail)
                         else:
                             details_list = approved_registrant_detail
-                        registrant_ids = [registrant["registrant_id"] for registrant in details_list]
+                        registrant_ids = [
+                            registrant["registrant_id"] for registrant in details_list
+                        ]
 
                 sql_queries = (
                     pbms_session.execute(
@@ -130,7 +132,9 @@ def beneficiary_list_worker(id: int):
                     .scalars()
                     .all()
                 )
-                constructed_query = construct_priority_query(sql_queries, registrant_ids)
+                constructed_query = construct_priority_query(
+                    sql_queries, registrant_ids
+                )
 
             else:
                 _logger.error(
@@ -145,7 +149,9 @@ def beneficiary_list_worker(id: int):
             cursor = sr_session.execute(constructed_query)
             while True:
                 number_of_registrants_for_batch = 0
-                beneficiary_list_batch = cursor.fetchmany(_config.disbursement_batch_size)
+                beneficiary_list_batch = cursor.fetchmany(
+                    _config.disbursement_batch_size
+                )
                 registrant_details = []
                 if not beneficiary_list_batch:
                     break
@@ -163,7 +169,10 @@ def beneficiary_list_worker(id: int):
                     BeneficiaryListDetails(
                         beneficiary_list_id=beneficiary_list.beneficiary_list_id,
                         registrant_details=json.dumps(registrant_details),
-                        entitlement_status=StatusEnum.PENDING.value if beneficiary_list.list_stage == ListStageEnum.DISBURSEMENT.value else StatusEnum.NOT_APPLICABLE.value,
+                        entitlement_status=StatusEnum.PENDING.value
+                        if beneficiary_list.list_stage
+                        == ListStageEnum.DISBURSEMENT.value
+                        else StatusEnum.NOT_APPLICABLE.value,
                         number_of_registrants=number_of_registrants_for_batch,
                     )
                 )
@@ -173,8 +182,9 @@ def beneficiary_list_worker(id: int):
             _logger.info(f"Adding eligibility details for beneficiary list id: {id}")
             eee_session.add_all(beneficiary_list_details)
 
-
-            _logger.info(f"Computing and adding summary statistics for beneficiary list id: {id}")
+            _logger.info(
+                f"Computing and adding summary statistics for beneficiary list id: {id}"
+            )
 
             # Create base summary object
             base_summary = BeneficiaryListSummary(
@@ -185,7 +195,9 @@ def beneficiary_list_worker(id: int):
                 number_of_registrants=total_number_of_registrants,
                 date_created=datetime.now(timezone.utc),
             )
-            _logger.debug(f"Base summary for beneficiary list id {id} is: {base_summary}")
+            _logger.debug(
+                f"Base summary for beneficiary list id {id} is: {base_summary}"
+            )
 
             try:
                 # Get the appropriate summary computation class
@@ -236,4 +248,6 @@ def beneficiary_list_worker(id: int):
                 # queue_entry.task_status = StatusEnum.FAILED
                 pbms_session.commit()
 
-        _logger.info(f"Completed processing eligibility request for beneficiary list id: {id}")
+        _logger.info(
+            f"Completed processing eligibility request for beneficiary list id: {id}"
+        )
