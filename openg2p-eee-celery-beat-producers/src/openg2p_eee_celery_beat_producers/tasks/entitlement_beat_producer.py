@@ -27,18 +27,6 @@ def entitlement_beat_producer():
         bind=_engine.get("db_engine_eee"), expire_on_commit=False
     )
     with eee_session_maker() as eee_session, pbms_session_maker():
-        # # Fetch beneficiary_list with PENDING entitlement status
-        # beneficiary_list: G2PBeneficiaryList = (
-        #     pbms_session.execute(
-        #         select(G2PBeneficiaryList)
-        #         .filter(
-        #             G2PBeneficiaryList.eligibility_process_status == StatusEnum.COMPLETE.value,
-        #             G2PBeneficiaryList.entitlement_process_status == StatusEnum.PENDING.value,
-        #             G2PBeneficiaryList.list_stage == ListStageEnum.DISBURSEMENT.value
-        #         )
-        #     )
-        # )
-        # Fetch corresponding beneficiary_list_details
         beneficiary_list_details: List[BeneficiaryListDetails] = (
             eee_session.execute(
                 select(BeneficiaryListDetails)

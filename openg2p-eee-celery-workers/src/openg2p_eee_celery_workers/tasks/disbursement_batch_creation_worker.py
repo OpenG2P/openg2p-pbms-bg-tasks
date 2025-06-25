@@ -74,9 +74,7 @@ def disbursement_batch_creation_worker(id: int):
 
             disbursement_batches = []
             for disbursement_envelope in disbursement_envelopes:
-                print("66")
                 for beneficiary_list_detail in beneficiary_list_details:
-                    print("68")
                     disbursements = []
                     for registrant_detail in beneficiary_list_detail.registrant_details:
                         registrant_detail = RegistrantDetails(**registrant_detail)
