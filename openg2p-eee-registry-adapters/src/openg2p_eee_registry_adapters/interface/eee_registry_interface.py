@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple
 
-from openg2p_eee_models.schemas import EEEBeneficiarySearchResponsePayload
+from openg2p_eee_models.schemas import Disbursement, EEEBeneficiarySearchResponsePayload
 from openg2p_pbms_models.models import G2PRegistry
 from sqlalchemy import TextClause, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,20 +18,20 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def lock_and_update_summary(
-        self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
+        self, number_of_registrants: int, beneficiary_list_id: str, eee_session: Session
     ) -> None:
         raise NotImplementedError("Subclasses must implement lock_and_update_summary()")
 
     @abstractmethod
     async def get_summary(
-        self, pbms_request_id: str, eee_session: Session, formated: bool = False
+        self, beneficiary_list_id: str, eee_session: Session, formated: bool = False
     ) -> EEESummaryPayload:
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary()")
 
     @abstractmethod
     def get_summary_sync(
-        self, pbms_request_id: str, eee_session: Session
+        self, beneficiary_list_id: str, eee_session: Session
     ) -> EEESummaryPayload:
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary_sync()")
@@ -51,8 +51,15 @@ class EEERegistryInterface(ABC):
         )
 
     @abstractmethod
+    def get_entitlement_multiplier(self, multiplier: str, sr_session: Session) -> int:
+        # Abstract method to get the multiplier value for entitlement calculation
+        raise NotImplementedError(
+            "Subclasses must implement get_entitlement_multiplier()"
+        )
+
+    @abstractmethod
     def compute_entitlements_and_modify_summary(
-        self, pbms_request_id: str, eee_session: Session, sr_session: Session
+        self, beneficiary_list_id: str, eee_session: Session, sr_session: Session
     ):
         # Abstract method to compute entitlements fields and modify summary
         raise NotImplementedError(
@@ -64,7 +71,7 @@ class EEERegistryInterface(ABC):
         self,
         eee_session: AsyncSession,
         pbms_session: AsyncSession,
-        pbms_request_id: str,
+        beneficiary_list_id: str,
         target_registry_type: str,
         search_query: str,
         page: int,
@@ -77,7 +84,7 @@ class EEERegistryInterface(ABC):
     @abstractmethod
     def compute_and_persist_summary(
         self,
-        eee_details: List[dict],
+        beneficiary_list_details: List[dict],
         base_summary,
         sr_session: Session,
         eee_session: Session,
@@ -85,9 +92,33 @@ class EEERegistryInterface(ABC):
         # Abstract method to compute summary statistics
         raise NotImplementedError("Subclasses must implement compute_summary()")
 
+    def get_bridge_disbursement_details(
+        self, beneficiary_list_id: str, registrant_ids: List[str], eee_session: Session
+    ) -> List[Disbursement]:
+        sql_query = text("")
+
+        disbursements = eee_session.execute(sql_query)
+
+        return disbursements
+
     # ======================
     # SQL Query Constructors
     # ======================
+    def construct_multiplier_sql_query(
+        self, multiplier: str, target_registry_type: str
+    ) -> TextClause:
+        if not multiplier or multiplier == "none":
+            return None
+
+        table_name = f"g2p_{target_registry_type}_registry"
+        sql_query = text(
+            f"""
+            SELECT {multiplier} FROM {table_name}
+            WHERE unique_id = :registrant_id
+            """
+        )
+        return sql_query
+
     # TODO: Implement batching in beneficiary search query builders
     def construct_beneficiary_search_sql_query(
         self,
