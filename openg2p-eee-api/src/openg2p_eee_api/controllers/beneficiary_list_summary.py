@@ -1,7 +1,7 @@
 import logging
 
 from openg2p_eee_models.errors import EEEException
-from openg2p_eee_models.models import EEESummary
+from openg2p_eee_models.models import BeneficiaryListSummary
 from openg2p_eee_models.schemas import (
     EEESummaryRequest,
     EEESummaryResponse,
@@ -23,7 +23,7 @@ class EEESummaryController(BaseController):
         self.eee_summary_service = EEESummaryService.get_component()
 
         self.router.add_api_route(
-            "/eee_summary",
+            "/beneficiary_list_summary",
             self.get_eee_summary,
             responses={200: {"model": EEESummaryResponse}},
             methods=["POST"],
@@ -35,12 +35,14 @@ class EEESummaryController(BaseController):
         _logger.debug("Eligibility Summary Request: %s", eee_summary_request)
 
         try:
-            eee_summary: EEESummary = await self.eee_summary_service.get_eee_summary(
-                eee_summary_request.message
+            beneficiary_list_summary: BeneficiaryListSummary = (
+                await self.eee_summary_service.get_eee_summary(
+                    eee_summary_request.message
+                )
             )
             eee_summary_response: EEESummaryResponse = (
                 await self.eee_summary_service.construct_eee_summary_success_response(
-                    eee_summary_request, eee_summary
+                    eee_summary_request, beneficiary_list_summary
                 )
             )
             _logger.info("Eligibility summary retrieved successfully")

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 
 class EEESummaryRequestPayload(BaseModel):
-    pbms_request_id: str
+    beneficiary_list_id: str
     target_registry_type: str
 
 

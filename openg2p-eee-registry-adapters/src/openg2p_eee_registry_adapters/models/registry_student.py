@@ -7,5 +7,6 @@ class G2PStudentRegistry(G2PRegistry):
     __tablename__ = "g2p_student_registry"
 
     name = mapped_column(String, nullable=False)
+    gender = mapped_column(String, nullable=True)  # 'male' or 'female'
     institution_name = mapped_column(String, nullable=True)
     date_of_birth = mapped_column(Date, nullable=True)
