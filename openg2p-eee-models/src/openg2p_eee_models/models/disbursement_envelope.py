@@ -33,6 +33,6 @@ class DisbursementEnvelope(BaseORMModel):
     cycle_code_mnemonic = mapped_column(String, nullable=False)
     number_of_beneficiaries = mapped_column(Integer, nullable=False)
     number_of_disbursements = mapped_column(Integer, nullable=False)
-    total_disbursed_quantity = mapped_column(Float, nullable=False)
+    total_disbursement_quantity = mapped_column(Float, nullable=False)
     measurement_unit = mapped_column(String, nullable=False)
     disbursement_schedule_date = mapped_column(DateTime, nullable=False)

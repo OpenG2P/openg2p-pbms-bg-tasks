@@ -28,7 +28,7 @@ _engine = get_engine()
 
 def create_disbursement_envelope_payload(
     benefit_code_id: int,
-    total_disbursed_quantity: float,
+    total_disbursement_quantity: float,
     program_definition: G2PProgramDefinition,
     disbursement_cycle: G2PDisbursementCycle,
     eee_summary_payload: EEESummaryPayload,
@@ -51,7 +51,7 @@ def create_disbursement_envelope_payload(
         disbursement_cycle_id=str(disbursement_cycle.id),
         number_of_beneficiaries=eee_summary_payload.general_summary.number_of_registrants,
         number_of_disbursements=eee_summary_payload.general_summary.number_of_registrants,
-        total_disbursed_quantity=total_disbursed_quantity,
+        total_disbursement_quantity=total_disbursement_quantity,
         disbursement_schedule_date=disbursement_cycle.disbursement_schedule_date,
         disbursement_frequency=program_definition.disbursement_frequency.value,
         measurement_unit=benefit_code.measurement_unit,
@@ -118,11 +118,11 @@ def disbursement_envelope_creation_worker(id: int):
             disbursement_envelope_request_message = []
             for (
                 benefit_code_id,
-                total_disbursed_quantity,
+                total_disbursement_quantity,
             ) in eee_summary_payload.general_summary.total_entitlement_amount.items():
                 disbursement_envelope_payload = create_disbursement_envelope_payload(
                     int(benefit_code_id),
-                    total_disbursed_quantity,
+                    total_disbursement_quantity,
                     program_definition,
                     disbursement_cycle,
                     eee_summary_payload,
@@ -167,7 +167,7 @@ def disbursement_envelope_creation_worker(id: int):
                     cycle_code_mnemonic=disbursment_envelope_reponse_message.cycle_code_mnemonic,
                     number_of_beneficiaries=disbursment_envelope_reponse_message.number_of_beneficiaries,
                     number_of_disbursements=disbursment_envelope_reponse_message.number_of_disbursements,
-                    total_disbursed_quantity=disbursment_envelope_reponse_message.total_disbursement_quantity,
+                    total_disbursement_quantity=disbursment_envelope_reponse_message.total_disbursement_quantity,
                     measurement_unit=disbursment_envelope_reponse_message.measurement_unit,
                     disbursement_schedule_date=disbursment_envelope_reponse_message.disbursement_schedule_date,
                 )
