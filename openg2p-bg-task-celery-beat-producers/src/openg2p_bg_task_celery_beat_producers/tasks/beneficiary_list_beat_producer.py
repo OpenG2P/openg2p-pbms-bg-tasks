@@ -16,7 +16,7 @@ _engine = get_engine()
 
 @celery_app.task(name="beneficiary_list_beat_producer")
 def beneficiary_list_beat_producer():
-    _logger.info("Checking for pending EEE eligibility requests")
+    _logger.info("Checking for pending beneficiary list requests")
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
@@ -37,24 +37,24 @@ def beneficiary_list_beat_producer():
         _logger.info(f"Found {len(beneficiary_lists)} pending eligibility requests")
 
         for beneficiary_list in beneficiary_lists:
-            _logger.info(f"Queueing EEE eligibility request ID: {beneficiary_list.id}")
+            _logger.info(f"Queueing beneficiary list id: {beneficiary_list.id}")
 
             beneficiary_list.eligibility_process_status = StatusEnum.PROCESSING.value
             pbms_session.add(beneficiary_list)
 
             _logger.info(
-                f"Updating status for {WorkerTypes.BENEFICIARY_LIST_WORKER} to PROCESSING in EEE eligibility request ID: {beneficiary_list.id}"
+                f"Updating status for {WorkerTypes.BENEFICIARY_LIST_WORKER} to PROCESSING in beneficiary list id: {beneficiary_list.id}"
             )
 
             # Send task to appropriate celery worker
             celery_app.send_task(
                 WorkerTypes.BENEFICIARY_LIST_WORKER,
                 args=(beneficiary_list.id,),
-                queue=_config.eee_task_worker_queue,
+                queue=_config.bg_task_worker_queue,
             )
             _logger.info(
-                f"Sent task to {WorkerTypes.BENEFICIARY_LIST_WORKER} for EEE eligibility request ID: {beneficiary_list.id}"
+                f"Sent task to {WorkerTypes.BENEFICIARY_LIST_WORKER} for beneficiary_list_id: {beneficiary_list.id}"
             )
         pbms_session.commit()
 
-    _logger.info("Completed processing pending EEE eligibility requests")
+    _logger.info("Completed processing pending beneficiary lists")

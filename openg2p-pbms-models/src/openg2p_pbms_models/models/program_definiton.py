@@ -37,9 +37,7 @@ class G2PProgramDefinition(BaseORMModel):
     program_mnemonic = mapped_column(String, nullable=False)
     description = mapped_column(String)
 
-    target_registry_type = mapped_column(
-        String, nullable=False
-    )  # TODO: rename to target_registry
+    target_registry = mapped_column(String, nullable=False)
     program_status = mapped_column(SqlEnum(ProgramStatus), nullable=False)
     disbursement_frequency = mapped_column(
         SqlEnum(DisbursementFrequency), nullable=True

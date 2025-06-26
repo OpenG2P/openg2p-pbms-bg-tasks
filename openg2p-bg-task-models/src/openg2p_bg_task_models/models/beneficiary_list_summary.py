@@ -11,7 +11,7 @@ class BeneficiaryListSummary(BaseORMModel):
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
     program_id = mapped_column(Integer, nullable=False)
     program_mnemonic = mapped_column(String, nullable=False)
-    target_registry_type = mapped_column(String, nullable=False)
+    target_registry = mapped_column(String, nullable=False)
     beneficiary_list_id = mapped_column(String, index=True, unique=True, nullable=False)
     number_of_registrants = mapped_column(Integer, nullable=False)
     number_of_entitlements_processed = mapped_column(Integer, nullable=False, default=0)

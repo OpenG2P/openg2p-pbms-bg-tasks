@@ -4,11 +4,11 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 
-class EEEGeneralSummary(BaseModel):
+class GeneralSummary(BaseModel):
     id: int
     program_id: int
     program_mnemonic: str
-    target_registry_type: str
+    target_registry: str
     beneficiary_list_id: str
     number_of_registrants: Any
     date_created: Optional[datetime]
@@ -16,5 +16,5 @@ class EEEGeneralSummary(BaseModel):
     average_entitlement_per_registrant: Optional[dict] = None
 
 
-class EEESummaryPayload(BaseModel):
-    general_summary: EEEGeneralSummary
+class SummaryPayload(BaseModel):
+    general_summary: GeneralSummary

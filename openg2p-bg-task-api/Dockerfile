@@ -28,10 +28,10 @@ RUN python3 -m pip install \
 
 USER ${container_user}
 
-ENV EEE_WORKER_TYPE=local
-ENV EEE_HOST=0.0.0.0
-ENV EEE_PORT=8000
-ENV EEE_NO_OF_WORKERS=8
+ENV BG_TASK_WORKER_TYPE=local
+ENV BG_TASK_HOST=0.0.0.0
+ENV BG_TASK_PORT=8000
+ENV BG_TASK_NO_OF_WORKERS=8
 
 CMD python3 main.py migrate; \
-    gunicorn "main:app" --workers ${EEE_NO_OF_WORKERS} --worker-class uvicorn.workers.UvicornWorker --bind ${EEE_HOST}:${EEE_PORT}
+    gunicorn "main:app" --workers ${BG_TASK_NO_OF_WORKERS} --worker-class uvicorn.workers.UvicornWorker --bind ${BG_TASK_HOST}:${BG_TASK_PORT}

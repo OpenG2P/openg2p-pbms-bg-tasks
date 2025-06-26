@@ -5,8 +5,8 @@ from typing import List
 
 from openg2p_bg_task_models.models import BeneficiaryListDetails
 from openg2p_bg_task_models.schemas import RegistrantDetails
-from openg2p_bg_task_registry_adapters.factory import EEERegistryFactory
-from openg2p_bg_task_registry_adapters.interface import EEERegistryInterface
+from openg2p_bg_task_registry_adapters.factory import RegistryFactory
+from openg2p_bg_task_registry_adapters.interface import RegistryInterface
 from openg2p_pbms_models.models import (
     G2PBeneficiaryList,
     G2PEntitlementRuleDefinition,
@@ -26,8 +26,8 @@ _engine = get_engine()
 @celery_app.task(name="entitlement_worker")
 def entitlement_worker(id: int):
     _logger.info("Starting entitlement list generation")
-    eee_session_maker = sessionmaker(
-        bind=_engine.get("db_engine_eee"), expire_on_commit=False
+    bg_task_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )
     sr_session_maker = sessionmaker(
         bind=_engine.get("db_engine_sr"), expire_on_commit=False
@@ -36,12 +36,12 @@ def entitlement_worker(id: int):
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
 
-    with eee_session_maker() as eee_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
+    with bg_task_session_maker() as bg_task_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
         beneficiary_list_details = None
         try:
             # Fetch the beneficiary list entry from pbms db using id
             beneficiary_list_details = (
-                eee_session.query(BeneficiaryListDetails)
+                bg_task_session.query(BeneficiaryListDetails)
                 .filter(BeneficiaryListDetails.id == id)
                 .first()
             )
@@ -63,13 +63,13 @@ def entitlement_worker(id: int):
                 )
                 return
 
-            target_registry_type = (
-                pbms_session.query(G2PProgramDefinition.target_registry_type)
+            target_registry = (
+                pbms_session.query(G2PProgramDefinition.target_registry)
                 .filter(G2PProgramDefinition.id == beneficiary_list.program_id)
                 .one_or_none()
             )
-            target_registry_type = target_registry_type[0]
-            _logger.info(f"target_registry {target_registry_type}")
+            target_registry = target_registry[0]
+            _logger.info(f"target_registry {target_registry}")
 
             entitlement_rule_definitions: List[G2PEntitlementRuleDefinition] = (
                 pbms_session.query(G2PEntitlementRuleDefinition)
@@ -98,13 +98,11 @@ def entitlement_worker(id: int):
                         continue
                     else:
                         try:
-                            eee_registry_interface: EEERegistryInterface = (
-                                EEERegistryFactory.get_registry_class(
-                                    target_registry_type
-                                )
+                            registry_interface: RegistryInterface = (
+                                RegistryFactory.get_registry_class(target_registry)
                             )
                             is_registrant_entitled: bool = (
-                                eee_registry_interface.get_is_registant_entitled(
+                                registry_interface.get_is_registant_entitled(
                                     registrant_details.registrant_id,
                                     entitlement_rule_definition.sql_query,
                                     sr_session,
@@ -112,7 +110,7 @@ def entitlement_worker(id: int):
                             )
                             if is_registrant_entitled:
                                 multiplier: int = (
-                                    eee_registry_interface.get_entitlement_multiplier(
+                                    registry_interface.get_entitlement_multiplier(
                                         entitlement_rule_definition.multiplier,
                                         registrant_details.registrant_id,
                                         sr_session,
@@ -179,7 +177,7 @@ def entitlement_worker(id: int):
             ]
 
             beneficiary_list_details.entitlement_status = StatusEnum.COMPLETE.value
-            eee_session.add(beneficiary_list_details)
+            bg_task_session.add(beneficiary_list_details)
 
             _logger.info(
                 f"Computing and updating entitlement summary statistics for beneficiary_list_id: {beneficiary_list_details.beneficiary_list_id}"
@@ -187,19 +185,19 @@ def entitlement_worker(id: int):
 
             try:
                 # Get the appropriate summary computation class
-                eee_registry_interface: EEERegistryInterface = (
-                    EEERegistryFactory.get_registry_class(target_registry_type)
+                registry_interface: RegistryInterface = (
+                    RegistryFactory.get_registry_class(target_registry)
                 )
-                eee_registry_interface.lock_and_update_summary(
+                registry_interface.lock_and_update_summary(
                     beneficiary_list_details.number_of_registrants,
                     beneficiary_list_details.beneficiary_list_id,
-                    eee_session,
+                    bg_task_session,
                 )
 
                 # Compute summary and add to session
-                eee_registry_interface.compute_entitlements_and_modify_summary(
+                registry_interface.compute_entitlements_and_modify_summary(
                     beneficiary_list_details.beneficiary_list_id,
-                    eee_session,
+                    bg_task_session,
                     sr_session,
                 )
 
@@ -217,7 +215,7 @@ def entitlement_worker(id: int):
             beneficiary_list.entitlement_process_status = StatusEnum.COMPLETE.value
             beneficiary_list.processed_date = datetime.now(timezone.utc)
 
-            eee_session.commit()
+            bg_task_session.commit()
             pbms_session.commit()
 
         except Exception as e:

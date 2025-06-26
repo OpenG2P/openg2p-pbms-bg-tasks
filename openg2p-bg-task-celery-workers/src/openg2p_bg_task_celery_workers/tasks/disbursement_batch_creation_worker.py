@@ -29,11 +29,11 @@ def disbursement_batch_creation_worker(id: int):
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
-    eee_session_maker = sessionmaker(
-        bind=_engine.get("db_engine_eee"), expire_on_commit=False
+    bg_task_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )
 
-    with pbms_session_maker() as pbms_session, eee_session_maker() as eee_session:
+    with pbms_session_maker() as pbms_session, bg_task_session_maker() as bg_task_session:
         beneficiary_list = None
         try:
             # Fetch the queue entry from pbms db using id
@@ -48,7 +48,7 @@ def disbursement_batch_creation_worker(id: int):
 
             # Get all BeneficiaryListDetails rows for the given beneficiary_list_id
             beneficiary_list_details = (
-                eee_session.query(BeneficiaryListDetails)
+                bg_task_session.query(BeneficiaryListDetails)
                 .filter(
                     BeneficiaryListDetails.beneficiary_list_id
                     == beneficiary_list.beneficiary_list_id
@@ -57,7 +57,7 @@ def disbursement_batch_creation_worker(id: int):
             )
             # Get all DisbursementEnvelope rows for the given beneficiary_list_id
             disbursement_envelopes = (
-                eee_session.query(DisbursementEnvelope)
+                bg_task_session.query(DisbursementEnvelope)
                 .filter(
                     DisbursementEnvelope.beneficiary_list_id
                     == beneficiary_list.beneficiary_list_id
@@ -98,10 +98,10 @@ def disbursement_batch_creation_worker(id: int):
 
             _logger.info(f"disbursement batches: {disbursement_batches}")
             # Bulk insert all the disbursement batches
-            eee_session.add_all(disbursement_batches)
+            bg_task_session.add_all(disbursement_batches)
 
             # Commit the changes to the database
-            eee_session.commit()
+            bg_task_session.commit()
             _logger.info(
                 f"Disbursement batch records created successfully for beneficiary list id: {id}"
             )

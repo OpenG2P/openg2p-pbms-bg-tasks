@@ -20,15 +20,17 @@ class Initializer(BaseInitializer):
 
 def get_engine():
     if _config.db_datasource:
-        db_engine_eee = create_engine(_config.db_datasource_eee)
+        db_engine_bg_task = create_engine(_config.db_datasource_bg_task)
         db_engine_sr = create_engine(_config.db_datasource_sr)
         db_engine_pbms = create_engine(_config.db_datasource_pbms)
-        db_engine_eee_async = create_async_engine(_config.db_datasource_eee_async)
+        db_engine_bg_task_async = create_async_engine(
+            _config.db_datasource_bg_task_async
+        )
         return {
-            "db_engine_eee": db_engine_eee,
+            "db_engine_bg_task": db_engine_bg_task,
             "db_engine_sr": db_engine_sr,
             "db_engine_pbms": db_engine_pbms,
-            "db_engine_eee_async": db_engine_eee_async,
+            "db_engine_bg_task_async": db_engine_bg_task_async,
         }
 
 

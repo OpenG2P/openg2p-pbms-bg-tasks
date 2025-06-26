@@ -5,7 +5,7 @@ import numpy as np
 from fastapi_cache.decorator import cache
 from openg2p_bg_task_models.models import BeneficiaryListDetails
 from openg2p_bg_task_models.schemas import (
-    EEEBeneficiarySearchResponsePayload,
+    BeneficiarySearchResponsePayload,
     RegistrantDetails,
 )
 from openg2p_pbms_models.models import Gender
@@ -15,17 +15,17 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
 from ..cache import beneficiary_count_key_builder
-from ..interface import EEERegistryInterface
+from ..interface import RegistryInterface
 from ..models import BeneficiaryListSummaryFarmer, G2PFarmerRegistry
 from ..schema import (
-    EEEGeneralSummary,
-    EEESummaryFarmerPayload,
     G2PFarmerRegistryPayload,
+    GeneralSummary,
     RegistrySummaryFarmerPayload,
+    SummaryFarmerPayload,
 )
 
 
-class EEERegistryFarmer(EEERegistryInterface):
+class RegistryFarmer(RegistryInterface):
     """Fetches farmer data and computes summary statistics"""
 
     # ===================
@@ -34,10 +34,10 @@ class EEERegistryFarmer(EEERegistryInterface):
     async def get_summary(
         self,
         beneficiary_list_id: str,
-        eee_session: AsyncSession,
+        bg_task_session: AsyncSession,
         formated: bool = False,
-    ) -> EEESummaryFarmerPayload:
-        beneficiary_list_summary_farmer = await eee_session.execute(
+    ) -> SummaryFarmerPayload:
+        beneficiary_list_summary_farmer = await bg_task_session.execute(
             select(BeneficiaryListSummaryFarmer).where(
                 BeneficiaryListSummaryFarmer.beneficiary_list_id == beneficiary_list_id
             )
@@ -69,12 +69,12 @@ class EEERegistryFarmer(EEERegistryInterface):
         #         + beneficiary_list_summary_farmer.entitlement_units
         #     )
 
-        summary_farmer_payload = EEESummaryFarmerPayload(
-            general_summary=EEEGeneralSummary(
+        summary_farmer_payload = SummaryFarmerPayload(
+            general_summary=GeneralSummary(
                 id=beneficiary_list_summary_farmer.id,
                 program_id=beneficiary_list_summary_farmer.program_id,
                 program_mnemonic=beneficiary_list_summary_farmer.program_mnemonic,
-                target_registry_type=beneficiary_list_summary_farmer.target_registry_type,
+                target_registry=beneficiary_list_summary_farmer.target_registry,
                 beneficiary_list_id=beneficiary_list_summary_farmer.beneficiary_list_id,
                 number_of_registrants=number_of_registrants,
                 date_created=beneficiary_list_summary_farmer.date_created,
@@ -107,20 +107,20 @@ class EEERegistryFarmer(EEERegistryInterface):
         return summary_farmer_payload
 
     def get_summary_sync(
-        self, beneficiary_list_id: str, eee_session: Session
-    ) -> EEESummaryFarmerPayload:
+        self, beneficiary_list_id: str, bg_task_session: Session
+    ) -> SummaryFarmerPayload:
         beneficiary_list_summary_farmer = (
-            eee_session.query(BeneficiaryListSummaryFarmer)
+            bg_task_session.query(BeneficiaryListSummaryFarmer)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
 
-        summary_farmer_payload = EEESummaryFarmerPayload(
-            general_summary=EEEGeneralSummary(
+        summary_farmer_payload = SummaryFarmerPayload(
+            general_summary=GeneralSummary(
                 id=beneficiary_list_summary_farmer.id,
                 program_id=beneficiary_list_summary_farmer.program_id,
                 program_mnemonic=beneficiary_list_summary_farmer.program_mnemonic,
-                target_registry_type=beneficiary_list_summary_farmer.target_registry_type,
+                target_registry=beneficiary_list_summary_farmer.target_registry,
                 beneficiary_list_id=beneficiary_list_summary_farmer.beneficiary_list_id,
                 number_of_registrants=beneficiary_list_summary_farmer.number_of_registrants,
                 date_created=beneficiary_list_summary_farmer.date_created,
@@ -156,16 +156,16 @@ class EEERegistryFarmer(EEERegistryInterface):
     # ==============================
     async def search_beneficiaries(
         self,
-        eee_session: AsyncSession,
+        bg_task_session: AsyncSession,
         sr_session: AsyncSession,
         beneficiary_list_id: str,
-        target_registry_type: str,
+        target_registry: str,
         search_query,
         page=1,
         page_size=10,
         order_by="id asc",
-    ) -> EEEBeneficiarySearchResponsePayload:
-        registrant_details = await eee_session.execute(
+    ) -> BeneficiarySearchResponsePayload:
+        registrant_details = await bg_task_session.execute(
             select(BeneficiaryListDetails.registrant_details).where(
                 BeneficiaryListDetails.beneficiary_list_id == beneficiary_list_id
             )
@@ -181,7 +181,7 @@ class EEERegistryFarmer(EEERegistryInterface):
             farmer_search_params,
         ) = self.construct_beneficiary_search_sql_query(
             registrant_ids,
-            target_registry_type,
+            target_registry,
             search_query,
             order_by,
             page_size,
@@ -216,7 +216,7 @@ class EEERegistryFarmer(EEERegistryInterface):
         # if list_status == "approved_for_disbursement":
         #     disbursements = self.get_bridge_disbursement_details()
 
-        response_payload = EEEBeneficiarySearchResponsePayload(
+        response_payload = BeneficiarySearchResponsePayload(
             total_beneficiary_count=total_beneficiary_count,
             page=page,
             page_size=page_size,
@@ -254,12 +254,12 @@ class EEERegistryFarmer(EEERegistryInterface):
         beneficiary_list_details: List[BeneficiaryListDetails],
         base_summary,
         sr_session: Session,
-        eee_session: Session,
+        bg_task_session: Session,
     ):
         farmer_summary = BeneficiaryListSummaryFarmer(
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
-            target_registry_type=base_summary.target_registry_type,
+            target_registry=base_summary.target_registry,
             beneficiary_list_id=base_summary.beneficiary_list_id,
             number_of_registrants=base_summary.number_of_registrants,
             date_created=base_summary.date_created,
@@ -310,7 +310,7 @@ class EEERegistryFarmer(EEERegistryInterface):
                 float(np.percentile(annual_incomes_array, 75, method="midpoint")), 2
             )
 
-        eee_session.add(farmer_summary)
+        bg_task_session.add(farmer_summary)
 
     def get_registrants_by_ids(
         self, registrant_ids, sr_session
@@ -325,19 +325,22 @@ class EEERegistryFarmer(EEERegistryInterface):
     # Entitlement Celery Worker Methods
     # =================================
     def lock_and_update_summary(
-        self, number_of_registrants: int, beneficiary_list_id: str, eee_session: Session
+        self,
+        number_of_registrants: int,
+        beneficiary_list_id: str,
+        bg_task_session: Session,
     ) -> None:
         try:
             summary_farmer = (
-                eee_session.query(BeneficiaryListSummaryFarmer)
+                bg_task_session.query(BeneficiaryListSummaryFarmer)
                 .filter_by(beneficiary_list_id=beneficiary_list_id)
                 .with_for_update()
                 .one()
             )
             summary_farmer.number_of_entitlements_processed += number_of_registrants
-            eee_session.commit()
+            bg_task_session.commit()
         except Exception as _:
-            eee_session.rollback()
+            bg_task_session.rollback()
 
     def get_is_registant_entitled(
         self, registrant_id: str, sql_query: str, sr_session: Session
@@ -357,7 +360,7 @@ class EEERegistryFarmer(EEERegistryInterface):
             return 1
 
         sql_query = self.construct_multiplier_sql_query(
-            multiplier, target_registry_type="farmer"
+            multiplier, target_registry="farmer"
         )
         params = {"registrant_id": registrant_id}
         result = sr_session.execute(sql_query, params).fetchone()
@@ -368,10 +371,10 @@ class EEERegistryFarmer(EEERegistryInterface):
         return multiplier_value
 
     def compute_entitlements_and_modify_summary(
-        self, beneficiary_list_id: str, eee_session: Session, sr_session: Session
+        self, beneficiary_list_id: str, bg_task_session: Session, sr_session: Session
     ):
         summary_farmer = (
-            eee_session.query(BeneficiaryListSummaryFarmer)
+            bg_task_session.query(BeneficiaryListSummaryFarmer)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
@@ -383,7 +386,7 @@ class EEERegistryFarmer(EEERegistryInterface):
             return
 
         beneficiary_list_details = (
-            eee_session.query(BeneficiaryListDetails)
+            bg_task_session.query(BeneficiaryListDetails)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .all()
         )
@@ -432,7 +435,7 @@ class EEERegistryFarmer(EEERegistryInterface):
         entitlement_male_stats = self.compute_stats_dict(entitlements_male)
         entitlement_female_stats = self.compute_stats_dict(entitlements_female)
 
-        eee_session.execute(
+        bg_task_session.execute(
             update(BeneficiaryListSummaryFarmer)
             .where(
                 BeneficiaryListSummaryFarmer.beneficiary_list_id == beneficiary_list_id

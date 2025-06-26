@@ -26,18 +26,18 @@ def construct_narrative(disbursement_cycle_mnemonic: str, program_mnemonic: str)
 @celery_app.task(name="disbursement_worker")
 def disbursement_worker(id: int):
     _logger.info("Starting disbursement batch worker")
-    eee_session_maker = sessionmaker(
-        bind=_engine.get("db_engine_eee"), expire_on_commit=False
+    bg_task_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
 
-    with pbms_session_maker() as pbms_session, eee_session_maker() as eee_session:
+    with pbms_session_maker() as pbms_session, bg_task_session_maker() as bg_task_session:
         disbursement_batch = None
         try:
             disbursement_batch = (
-                eee_session.query(DisbursementBatch)
+                bg_task_session.query(DisbursementBatch)
                 .filter(DisbursementBatch.id == id)
                 .first()
             )
@@ -87,7 +87,7 @@ def disbursement_worker(id: int):
                 disbursement_response,
                 error,
             ) = bridge_disbursement_helper.create_disbursement(
-                disbursement_batch, eee_session, narrative
+                disbursement_batch, bg_task_session, narrative
             )
             if error:
                 raise Exception(f"Error creating disbursement: {error}")
@@ -118,7 +118,7 @@ def disbursement_worker(id: int):
 
             # Update the disbursement batch status
             disbursement_batch.disbursement_status = StatusEnum.COMPLETE.value
-            eee_session.commit()
+            bg_task_session.commit()
             _logger.info(
                 f"Disbursements created successfully for disbursement batch id: {id}"
             )
@@ -128,4 +128,4 @@ def disbursement_worker(id: int):
 
             if disbursement_batch:
                 disbursement_batch.disbursement_status = StatusEnum.PENDING.value
-                eee_session.commit()
+                bg_task_session.commit()

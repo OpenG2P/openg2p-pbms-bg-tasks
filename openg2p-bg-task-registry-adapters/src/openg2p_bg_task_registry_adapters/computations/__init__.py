@@ -1,2 +1,2 @@
-from .eee_registry_farmer import EEERegistryFarmer
-from .eee_registry_student import EEERegistryStudent
+from .registry_farmer import RegistryFarmer
+from .registry_student import RegistryStudent

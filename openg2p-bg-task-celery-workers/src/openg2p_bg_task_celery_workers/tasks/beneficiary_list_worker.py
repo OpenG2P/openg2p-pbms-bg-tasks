@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 
 from openg2p_bg_task_models.models import BeneficiaryListDetails, BeneficiaryListSummary
 from openg2p_bg_task_models.schemas import RegistrantDetails
-from openg2p_bg_task_registry_adapters.factory import EEERegistryFactory
-from openg2p_bg_task_registry_adapters.interface import EEERegistryInterface
+from openg2p_bg_task_registry_adapters.factory import RegistryFactory
+from openg2p_bg_task_registry_adapters.interface import RegistryInterface
 from openg2p_pbms_models.models import (
     G2PBeneficiaryList,
     G2PEligibilityRuleDefinition,
@@ -33,8 +33,8 @@ _engine = get_engine()
 @celery_app.task(name="beneficiary_list_worker")
 def beneficiary_list_worker(id: int):
     _logger.info("Starting eligibility list generation")
-    eee_session_maker = sessionmaker(
-        bind=_engine.get("db_engine_eee"), expire_on_commit=False
+    bg_task_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )
     sr_session_maker = sessionmaker(
         bind=_engine.get("db_engine_sr"), expire_on_commit=False
@@ -43,7 +43,7 @@ def beneficiary_list_worker(id: int):
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
 
-    with eee_session_maker() as eee_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
+    with bg_task_session_maker() as bg_task_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
         beneficiary_list = None
         try:
             # Fetch the queue entry from pbms db using id
@@ -97,7 +97,7 @@ def beneficiary_list_worker(id: int):
                 approved_registrant_details = None
                 if latest_approved_final_enrollment_beneficiary_list_id:
                     latest_beneficiary_list_details = (
-                        eee_session.execute(
+                        bg_task_session.execute(
                             select(BeneficiaryListDetails.registrant_details).where(
                                 BeneficiaryListDetails.beneficiary_list_id
                                 == latest_approved_final_enrollment_beneficiary_list_id
@@ -180,7 +180,7 @@ def beneficiary_list_worker(id: int):
                 f"Count of registrant IDs for beneficiary list id {id} are: {total_number_of_registrants}"
             )
             _logger.info(f"Adding eligibility details for beneficiary list id: {id}")
-            eee_session.add_all(beneficiary_list_details)
+            bg_task_session.add_all(beneficiary_list_details)
 
             _logger.info(
                 f"Computing and adding summary statistics for beneficiary list id: {id}"
@@ -190,7 +190,7 @@ def beneficiary_list_worker(id: int):
             base_summary = BeneficiaryListSummary(
                 program_id=beneficiary_list.program_id,
                 program_mnemonic=g2p_program_definition.program_mnemonic,
-                target_registry_type=g2p_program_definition.target_registry_type,
+                target_registry=g2p_program_definition.target_registry,
                 beneficiary_list_id=beneficiary_list.beneficiary_list_id,
                 number_of_registrants=total_number_of_registrants,
                 date_created=datetime.now(timezone.utc),
@@ -201,15 +201,15 @@ def beneficiary_list_worker(id: int):
 
             try:
                 # Get the appropriate summary computation class
-                summary_computation_interface: EEERegistryInterface = (
-                    EEERegistryFactory.get_registry_class(
-                        g2p_program_definition.target_registry_type
+                summary_computation_interface: RegistryInterface = (
+                    RegistryFactory.get_registry_class(
+                        g2p_program_definition.target_registry
                     )
                 )
 
                 # Compute summary and add to session
                 summary_computation_interface.compute_and_persist_summary(
-                    beneficiary_list_details, base_summary, sr_session, eee_session
+                    beneficiary_list_details, base_summary, sr_session, bg_task_session
                 )
 
                 _logger.info(
@@ -236,7 +236,7 @@ def beneficiary_list_worker(id: int):
 
             beneficiary_list.processed_date = datetime.now(timezone.utc)
 
-            eee_session.commit()
+            bg_task_session.commit()
             pbms_session.commit()
 
         except Exception as e:

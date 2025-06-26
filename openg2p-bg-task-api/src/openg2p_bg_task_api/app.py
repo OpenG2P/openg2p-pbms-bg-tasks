@@ -14,8 +14,17 @@ from openg2p_fastapi_common.context import dbengine
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from .config import Settings
-from .controllers import EEEBeneficiarySearchController, EEESummaryController
-from .services import EEEBeneficiarySearchService, EEESummaryService
+from .controllers import (
+    BeneficiarySearchController,
+    DisbursementController,
+    SummaryController,
+)
+from .services import (
+    BeneficiarySearchService,
+    DisbursementBatchService,
+    DisbursementEnvelopeService,
+    SummaryService,
+)
 
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
@@ -25,20 +34,23 @@ class Initializer(BaseInitializer):
     def initialize(self, **kwargs):
         super().initialize()
         init_cache()
-        EEESummaryService()
-        EEEBeneficiarySearchService()
-        EEESummaryController().post_init()
-        EEEBeneficiarySearchController().post_init()
+        SummaryService()
+        BeneficiarySearchService()
+        DisbursementBatchService()
+        DisbursementEnvelopeService()
+        SummaryController().post_init()
+        DisbursementController().post_init()
+        BeneficiarySearchController().post_init()
 
     def init_db(self):
         if _config.db_datasource:
             db_engine = create_async_engine(
-                _config.db_datasource_eee, echo=_config.db_logging
+                _config.db_datasource_bg_task, echo=_config.db_logging
             )
             dbengine.set(db_engine)
 
     def migrate_database(self, args):
-        _logger.info(f"Database migration completed{_config.db_datasource_eee}")
+        _logger.info(f"Database migration completed{_config.db_datasource_bg_task}")
         super().migrate_database(args)
 
         async def migrate():

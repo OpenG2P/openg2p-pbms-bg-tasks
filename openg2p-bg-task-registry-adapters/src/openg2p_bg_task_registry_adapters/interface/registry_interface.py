@@ -2,40 +2,43 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple
 
 from openg2p_bg_task_models.schemas import (
+    BeneficiarySearchResponsePayload,
     Disbursement,
-    EEEBeneficiarySearchResponsePayload,
 )
 from openg2p_pbms_models.models import G2PRegistry
 from sqlalchemy import TextClause, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from ..schema import EEESummaryPayload
+from ..schema import SummaryPayload
 
 
-class EEERegistryInterface(ABC):
+class RegistryInterface(ABC):
     """
-    Base class for EEE Registry Interface
-    Defines methods for interacting with the EEE registry classes
+    Base class for Registry Interface
+    Defines methods for interacting with the registry classes
     """
 
     @abstractmethod
     def lock_and_update_summary(
-        self, number_of_registrants: int, beneficiary_list_id: str, eee_session: Session
+        self,
+        number_of_registrants: int,
+        beneficiary_list_id: str,
+        bg_task_session: Session,
     ) -> None:
         raise NotImplementedError("Subclasses must implement lock_and_update_summary()")
 
     @abstractmethod
     async def get_summary(
-        self, beneficiary_list_id: str, eee_session: Session, formated: bool = False
-    ) -> EEESummaryPayload:
+        self, beneficiary_list_id: str, bg_task_session: Session, formated: bool = False
+    ) -> SummaryPayload:
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary()")
 
     @abstractmethod
     def get_summary_sync(
-        self, beneficiary_list_id: str, eee_session: Session
-    ) -> EEESummaryPayload:
+        self, beneficiary_list_id: str, bg_task_session: Session
+    ) -> SummaryPayload:
         # Abstract method to get summary statistics
         raise NotImplementedError("Subclasses must implement get_summary_sync()")
 
@@ -62,7 +65,7 @@ class EEERegistryInterface(ABC):
 
     @abstractmethod
     def compute_entitlements_and_modify_summary(
-        self, beneficiary_list_id: str, eee_session: Session, sr_session: Session
+        self, beneficiary_list_id: str, bg_task_session: Session, sr_session: Session
     ):
         # Abstract method to compute entitlements fields and modify summary
         raise NotImplementedError(
@@ -72,15 +75,15 @@ class EEERegistryInterface(ABC):
     @abstractmethod
     async def search_beneficiaries(
         self,
-        eee_session: AsyncSession,
+        bg_task_session: AsyncSession,
         pbms_session: AsyncSession,
         beneficiary_list_id: str,
-        target_registry_type: str,
+        target_registry: str,
         search_query: str,
         page: int,
         page_size: int,
         order_by: str,
-    ) -> EEEBeneficiarySearchResponsePayload:
+    ) -> BeneficiarySearchResponsePayload:
         # Abstract method to search beneficiaries for particular eligibility request id
         raise NotImplementedError("Subclasses must implement search_beneficiaries()")
 
@@ -90,17 +93,20 @@ class EEERegistryInterface(ABC):
         beneficiary_list_details: List[dict],
         base_summary,
         sr_session: Session,
-        eee_session: Session,
+        bg_task_session: Session,
     ):
         # Abstract method to compute summary statistics
         raise NotImplementedError("Subclasses must implement compute_summary()")
 
     def get_bridge_disbursement_details(
-        self, beneficiary_list_id: str, registrant_ids: List[str], eee_session: Session
+        self,
+        beneficiary_list_id: str,
+        registrant_ids: List[str],
+        bg_task_session: Session,
     ) -> List[Disbursement]:
         sql_query = text("")
 
-        disbursements = eee_session.execute(sql_query)
+        disbursements = bg_task_session.execute(sql_query)
 
         return disbursements
 
@@ -108,12 +114,12 @@ class EEERegistryInterface(ABC):
     # SQL Query Constructors
     # ======================
     def construct_multiplier_sql_query(
-        self, multiplier: str, target_registry_type: str
+        self, multiplier: str, target_registry: str
     ) -> TextClause:
         if not multiplier or multiplier == "none":
             return None
 
-        table_name = f"g2p_{target_registry_type}_registry"
+        table_name = f"g2p_{target_registry}_registry"
         sql_query = text(
             f"""
             SELECT {multiplier} FROM {table_name}
@@ -122,11 +128,10 @@ class EEERegistryInterface(ABC):
         )
         return sql_query
 
-    # TODO: Implement batching in beneficiary search query builders
     def construct_beneficiary_search_sql_query(
         self,
         registrant_ids: List[str],
-        target_registry_type: str,
+        target_registry: str,
         where_clause: str,
         order_by: str,
         page_size: int,
@@ -139,7 +144,7 @@ class EEERegistryInterface(ABC):
         where_clause = where_clause.replace("“", '"').replace("”", '"')
         where_clause = where_clause.replace("‘", "'").replace("’", "'")
 
-        table_name = f"g2p_{target_registry_type}_registry"
+        table_name = f"g2p_{target_registry}_registry"
         where_clause_sql = f" AND {where_clause}" if where_clause else ""
         registrant_placeholders = ", ".join(
             [f":registrant_id_{i}" for i in range(len(registrant_ids))]
@@ -163,7 +168,7 @@ class EEERegistryInterface(ABC):
         return sql_query, params
 
     def construct_beneficiary_search_count_sql_query(
-        self, registrant_ids: List[str], target_registry_type: str, where_clause: str
+        self, registrant_ids: List[str], target_registry: str, where_clause: str
     ) -> Tuple[TextClause, Dict[str, Any]]:
         if not registrant_ids:
             return None, {}
@@ -172,7 +177,7 @@ class EEERegistryInterface(ABC):
         where_clause = where_clause.replace("“", '"').replace("”", '"')
         where_clause = where_clause.replace("‘", "'").replace("’", "'")
 
-        table_name = f"g2p_{target_registry_type}_registry"
+        table_name = f"g2p_{target_registry}_registry"
         where_clause_sql = f" AND {where_clause}" if where_clause else ""
         registrant_placeholders = ", ".join(
             [f":registrant_id_{i}" for i in range(len(registrant_ids))]
@@ -192,7 +197,7 @@ class EEERegistryInterface(ABC):
         return sql_query, params
 
     def construct_get_is_registrant_entitled_sql_query(
-        self, registrant_id: str, target_registry_type: str, sql_query: str
+        self, registrant_id: str, target_registry: str, sql_query: str
     ) -> TextClause:
         sql_query = sql_query.strip()
 
@@ -203,11 +208,11 @@ class EEERegistryInterface(ABC):
 
         if "WHERE" in sql_query.upper():
             sql_query += (
-                f" AND g2p_{target_registry_type}_registry.unique_id = :registrant_id"
+                f" AND g2p_{target_registry}_registry.unique_id = :registrant_id"
             )
         else:
             sql_query += (
-                f" WHERE g2p_{target_registry_type}_registry.unique_id = :registrant_id"
+                f" WHERE g2p_{target_registry}_registry.unique_id = :registrant_id"
             )
 
         params = {"registrant_id": registrant_id}

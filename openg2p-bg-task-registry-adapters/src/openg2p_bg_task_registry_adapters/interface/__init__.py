@@ -1,1 +1,1 @@
-from .eee_registry_interface import EEERegistryInterface
+from .registry_interface import RegistryInterface

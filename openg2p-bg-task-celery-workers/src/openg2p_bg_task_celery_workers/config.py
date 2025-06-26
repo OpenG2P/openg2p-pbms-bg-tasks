@@ -6,24 +6,26 @@ from . import __version__
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="eee_celery_workers_", env_file=".env", extra="allow"
+        env_prefix="bg_task_celery_workers_", env_file=".env", extra="allow"
     )
-    openapi_title: str = "OpenG2P EEE Celery Workers"
+    openapi_title: str = "OpenG2P PBMS Background Task Celery Workers"
     openapi_description: str = """
-        Celery workers for OpenG2P Eligibility Entitlement Engine
+        Celery workers for OpenG2P PBMS Background Task
         ***********************************
         Further details goes here
         ***********************************
         """
     openapi_version: str = __version__
 
-    db_datasource_eee: str = "postgresql://postgres:postgres@localhost:5432/eeedb"
+    db_datasource_bg_task: str = (
+        "postgresql://postgres:postgres@localhost:5432/bgtaskdb"
+    )
     db_datasource_sr: str = (
         "postgresql://postgres:postgres@localhost:5432/socialregistrydb"
     )
     db_datasource_pbms: str = "postgresql://postgres:postgres@localhost:5432/pbmsdb"
-    db_datasource_eee_async: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/eeedb"
+    db_datasource_bg_task_async: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/bgtaskdb"
     )
 
     celery_broker_url: str = "redis://localhost:6379/0"

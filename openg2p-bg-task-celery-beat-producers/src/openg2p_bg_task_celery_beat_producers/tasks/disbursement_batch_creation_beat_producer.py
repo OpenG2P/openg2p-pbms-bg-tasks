@@ -58,7 +58,7 @@ def disbursement_batch_creation_beat_producer():
             celery_app.send_task(
                 worker_type,
                 args=(beneficiary_list.id,),
-                queue=_config.eee_task_worker_queue,
+                queue=_config.bg_task_worker_queue,
             )
             _logger.info(
                 f"Sent task to {worker_type} for Beneficiary List ID: {beneficiary_list.id}"

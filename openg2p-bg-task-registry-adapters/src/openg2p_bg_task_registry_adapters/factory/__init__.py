@@ -1,1 +1,1 @@
-from .eee_registry_factory import EEERegistryFactory
+from .registry_factory import RegistryFactory

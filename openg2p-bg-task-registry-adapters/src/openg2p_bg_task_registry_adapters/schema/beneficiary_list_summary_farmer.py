@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from .beneficiary_list_summary import EEESummaryPayload
+from .beneficiary_list_summary import SummaryPayload
 
 
 class RegistrySummaryFarmerPayload(BaseModel):
@@ -27,5 +27,5 @@ class RegistrySummaryFarmerPayload(BaseModel):
     entitlement_amount_female_25: Optional[dict] = None
 
 
-class EEESummaryFarmerPayload(EEESummaryPayload):
+class SummaryFarmerPayload(SummaryPayload):
     registry_summary: RegistrySummaryFarmerPayload

@@ -1,16 +1,16 @@
 from typing import Optional
 
-from .codes import EEEErrorCodes
+from .codes import BGTaskErrorCodes
 
 
-class EEEException(Exception):
+class BGTaskException(Exception):
     def __init__(
         self,
-        code: EEEErrorCodes,
-        eee_payload: Optional[object] = None,
+        code: BGTaskErrorCodes,
+        payload: Optional[object] = None,
         message: Optional[str] = None,
     ):
-        self.code: EEEErrorCodes = code
+        self.code: BGTaskErrorCodes = code
         self.message: Optional[str] = message
-        self.eee_payload: object = eee_payload
+        self.payload: object = payload
         super().__init__(code, self.message)

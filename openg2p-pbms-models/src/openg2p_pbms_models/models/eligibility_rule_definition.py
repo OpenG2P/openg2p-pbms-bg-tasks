@@ -13,6 +13,6 @@ class G2PEligibilityRuleDefinition(BaseORMModel):
     program_id = mapped_column(
         Integer, ForeignKey("g2p_program_definition.id"), nullable=False
     )
-    target_registry_type = mapped_column(String, nullable=False)
+    target_registry = mapped_column(String, nullable=False)
     pbms_domain = mapped_column(String, nullable=False)
     sql_query = mapped_column(String, nullable=True)

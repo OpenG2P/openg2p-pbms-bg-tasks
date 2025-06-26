@@ -1,13 +1,13 @@
 import json
 import logging
 from datetime import date
-from typing import List
+from typing import Dict, List, Optional
 
 import numpy as np
 from fastapi_cache.decorator import cache
 from openg2p_bg_task_models.models import BeneficiaryListDetails
 from openg2p_bg_task_models.schemas import (
-    EEEBeneficiarySearchResponsePayload,
+    BeneficiarySearchResponsePayload,
     RegistrantDetails,
 )
 from openg2p_pbms_models.models import Gender
@@ -17,42 +17,46 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 
 from ..cache import beneficiary_count_key_builder
-from ..interface import EEERegistryInterface
+from ..interface import RegistryInterface
 from ..models import BeneficiaryListSummaryStudent, G2PStudentRegistry
 from ..schema import (
-    EEEGeneralSummary,
-    EEESummaryStudentPayload,
     G2PStudentRegistryPayload,
+    GeneralSummary,
     RegistrySummaryStudentPayload,
+    SummaryStudentPayload,
 )
 
 _logger = logging.getLogger("openg2p_bg_task_registry_adapters")
 
 
-class EEERegistryStudent(EEERegistryInterface):
+class RegistryStudent(RegistryInterface):
     """Fetches student data and computes summary statistics"""
 
     # ===================
     # Summary API Methods
     # ===================
     async def get_summary(
-        self, beneficiary_list_id: int, eee_session: AsyncSession
-    ) -> EEESummaryStudentPayload:
+        self, beneficiary_list_id: int, bg_task_session: AsyncSession
+    ) -> SummaryStudentPayload:
         _logger.info(f"Fetching summary for beneficiary_list_id: {beneficiary_list_id}")
-        _logger.info(f"Type of session: {(eee_session)}")
-        eligibility_summary_student = await eee_session.execute(
+        eligibility_summary_student = await bg_task_session.execute(
             select(BeneficiaryListSummaryStudent).where(
                 BeneficiaryListSummaryStudent.beneficiary_list_id == beneficiary_list_id
             )
         )
         eligibility_summary_student = eligibility_summary_student.scalars().first()
 
-        summary = EEESummaryStudentPayload(
-            general_summary=EEEGeneralSummary(
+        if not eligibility_summary_student:
+            raise ValueError(
+                f"No summary found for beneficiary_list_id: {beneficiary_list_id}"
+            )
+
+        summary = SummaryStudentPayload(
+            general_summary=GeneralSummary(
                 id=eligibility_summary_student.id,
                 program_id=eligibility_summary_student.program_id,
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
-                target_registry_type=eligibility_summary_student.target_registry_type,
+                target_registry=eligibility_summary_student.target_registry,
                 beneficiary_list_id=eligibility_summary_student.beneficiary_list_id,
                 number_of_registrants=format(
                     eligibility_summary_student.number_of_registrants, ","
@@ -91,20 +95,25 @@ class EEERegistryStudent(EEERegistryInterface):
         return summary
 
     def get_summary_sync(
-        self, beneficiary_list_id: str, eee_session: Session
-    ) -> EEESummaryStudentPayload:
+        self, beneficiary_list_id: str, bg_task_session: Session
+    ) -> SummaryStudentPayload:
         eligibility_summary_student = (
-            eee_session.query(BeneficiaryListSummaryStudent)
+            bg_task_session.query(BeneficiaryListSummaryStudent)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
 
-        summary = EEESummaryStudentPayload(
-            general_summary=EEEGeneralSummary(
+        if not eligibility_summary_student:
+            raise ValueError(
+                f"No summary found for beneficiary_list_id: {beneficiary_list_id}"
+            )
+
+        summary = SummaryStudentPayload(
+            general_summary=GeneralSummary(
                 id=eligibility_summary_student.id,
                 program_id=eligibility_summary_student.program_id,
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
-                target_registry_type=eligibility_summary_student.target_registry_type,
+                target_registry=eligibility_summary_student.target_registry,
                 beneficiary_list_id=eligibility_summary_student.beneficiary_list_id,
                 number_of_registrants=eligibility_summary_student.number_of_registrants,
                 date_created=eligibility_summary_student.date_created,
@@ -137,33 +146,32 @@ class EEERegistryStudent(EEERegistryInterface):
     # ==============================
     async def search_beneficiaries(
         self,
-        eee_session: AsyncSession,
+        bg_task_session: AsyncSession,
         sr_session: AsyncSession,
         beneficiary_list_id: str,
-        target_registry_type: str,
-        search_query,
-        page=1,
-        page_size=10,
-        order_by="id asc",
-    ) -> EEEBeneficiarySearchResponsePayload:
-        registrant_details = await eee_session.execute(
+        target_registry: str,
+        search_query: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 10,
+        order_by: str = "id asc",
+    ) -> BeneficiarySearchResponsePayload:
+        registrant_details_result = await bg_task_session.execute(
             select(BeneficiaryListDetails.registrant_details).where(
                 BeneficiaryListDetails.beneficiary_list_id == beneficiary_list_id
             )
         )
-        registrant_details = registrant_details.scalars().all()
+        registrant_details = registrant_details_result.scalars().all()
         registrant_ids = []
         for registrant_detail in registrant_details:
             for registrant in registrant_detail:
                 registrant_ids.append(registrant["registrant_id"])
 
-        # TODO: Implement batching in beneficiary search
         (
             student_search_query,
             student_search_params,
         ) = self.construct_beneficiary_search_sql_query(
             registrant_ids,
-            target_registry_type,
+            target_registry,
             search_query,
             order_by,
             page_size,
@@ -193,7 +201,7 @@ class EEERegistryStudent(EEERegistryInterface):
                 for student in student_search_results
             ]
 
-        response_payload = EEEBeneficiarySearchResponsePayload(
+        response_payload = BeneficiarySearchResponsePayload(
             total_beneficiary_count=total_beneficiary_count,
             page=page,
             page_size=page_size,
@@ -208,7 +216,7 @@ class EEERegistryStudent(EEERegistryInterface):
         sr_session: AsyncSession,
         beneficiary_list_id: str,
         registrant_ids: List[str],
-        search_query: str,
+        search_query: Optional[str] = None,
     ) -> int:
         (
             beneficiary_count_query,
@@ -230,13 +238,16 @@ class EEERegistryStudent(EEERegistryInterface):
         beneficiary_list_details: List[dict],
         base_summary,
         sr_session: Session,
-        eee_session: Session,
+        bg_task_session: Session,
     ):
         students_age = []
 
         for beneficiary_list_detail in beneficiary_list_details:
             registrant_ids = []
-            for registrant in json.loads(beneficiary_list_detail["registrant_details"]):
+            registrant_details = beneficiary_list_detail.get("registrant_details")
+            if isinstance(registrant_details, str):
+                registrant_details = json.loads(registrant_details)
+            for registrant in registrant_details:
                 registrant_ids.append(registrant["registrant_id"])
 
             registrants = self.get_registrants_by_ids(registrant_ids, sr_session)
@@ -246,7 +257,7 @@ class EEERegistryStudent(EEERegistryInterface):
         student_summary = BeneficiaryListSummaryStudent(
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
-            target_registry_type=base_summary.target_registry_type,
+            target_registry=base_summary.target_registry,
             beneficiary_list_id=base_summary.beneficiary_list_id,
             number_of_registrants=base_summary.number_of_registrants,
             date_created=base_summary.date_created,
@@ -265,11 +276,13 @@ class EEERegistryStudent(EEERegistryInterface):
             )
             student_summary.age_mean = round(float(np.mean(students_age_array)), 2)
 
-        eee_session.add(student_summary)
+        bg_task_session.add(student_summary)
 
     def get_registrants_by_ids(
-        self, registrant_ids, sr_session
+        self, registrant_ids: List[str], sr_session: Session
     ) -> List[G2PStudentRegistry]:
+        if not registrant_ids:
+            return []
         return (
             sr_session.query(G2PStudentRegistry)
             .filter(G2PStudentRegistry.unique_id.in_(registrant_ids))
@@ -289,19 +302,23 @@ class EEERegistryStudent(EEERegistryInterface):
     # Entitlement Celery Worker Methods
     # =================================
     def lock_and_update_summary(
-        self, number_of_registrants: int, beneficiary_list_id: str, eee_session: Session
+        self,
+        number_of_registrants: int,
+        beneficiary_list_id: str,
+        bg_task_session: Session,
     ) -> None:
         try:
             summary_student = (
-                eee_session.query(BeneficiaryListSummaryStudent)
+                bg_task_session.query(BeneficiaryListSummaryStudent)
                 .filter_by(beneficiary_list_id=beneficiary_list_id)
                 .with_for_update()
                 .one()
             )
             summary_student.number_of_entitlements_processed += number_of_registrants
-            eee_session.commit()
-        except Exception as _:
-            eee_session.rollback()
+            bg_task_session.commit()
+        except Exception as e:
+            _logger.error(f"Error in lock_and_update_summary: {e}")
+            bg_task_session.rollback()
 
     def get_is_registant_entitled(
         self, registrant_id: str, sql_query: str, sr_session: Session
@@ -321,21 +338,27 @@ class EEERegistryStudent(EEERegistryInterface):
             return 1
 
         sql_query = self.construct_multiplier_sql_query(
-            multiplier, target_registry_type="student"
+            multiplier, target_registry="student"
         )
         params = {"registrant_id": registrant_id}
-        multiplier_value: int = sr_session.execute(sql_query, params).fetchone()
-
-        return multiplier_value
+        result = sr_session.execute(sql_query, params).fetchone()
+        if result is None or result[0] is None:
+            return 1
+        return int(result[0])
 
     def compute_entitlements_and_modify_summary(
-        self, beneficiary_list_id: str, eee_session: Session, sr_session: Session
+        self, beneficiary_list_id: str, bg_task_session: Session, sr_session: Session
     ):
         summary_student = (
-            eee_session.query(BeneficiaryListSummaryStudent)
+            bg_task_session.query(BeneficiaryListSummaryStudent)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
+
+        if not summary_student:
+            raise ValueError(
+                f"No summary found for beneficiary_list_id: {beneficiary_list_id}"
+            )
 
         if (
             summary_student.number_of_entitlements_processed
@@ -344,18 +367,19 @@ class EEERegistryStudent(EEERegistryInterface):
             return
 
         beneficiary_list_details = (
-            eee_session.query(BeneficiaryListDetails)
+            bg_task_session.query(BeneficiaryListDetails)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .all()
         )
 
-        registrant_map: dict[str, G2PStudentRegistry] = {}
+        registrant_map: Dict[str, G2PStudentRegistry] = {}
 
         for beneficiary_list_detail in beneficiary_list_details:
             registrant_ids = []
-            for registrant_detail in beneficiary_list_detail.registrant_details:
-                registrant_detail = RegistrantDetails(**registrant_detail)
-                registrant_ids.append(registrant_detail.registrant_id)
+            registrant_details = beneficiary_list_detail.registrant_details
+            for registrant_detail in registrant_details:
+                registrant_detail_obj = RegistrantDetails(**registrant_detail)
+                registrant_ids.append(registrant_detail_obj.registrant_id)
 
             registrants_list: List[G2PStudentRegistry] = self.get_registrants_by_ids(
                 registrant_ids, sr_session
@@ -365,18 +389,20 @@ class EEERegistryStudent(EEERegistryInterface):
                 registrant_map[str(registrant.unique_id)] = registrant
 
         # Collect entitlements per benefit_code_id
-        entitlements: dict[int, list[float]] = {}
-        entitlements_male: dict[int, list[float]] = {}
-        entitlements_female: dict[int, list[float]] = {}
+        entitlements: Dict[int, list[float]] = {}
+        entitlements_male: Dict[int, list[float]] = {}
+        entitlements_female: Dict[int, list[float]] = {}
 
         for beneficiary_list_detail in beneficiary_list_details:
             for registrant_detail in beneficiary_list_detail.registrant_details:
-                registrant_detail = RegistrantDetails(**registrant_detail)
-                registrant = registrant_map.get(str(registrant_detail.registrant_id))
+                registrant_detail_obj = RegistrantDetails(**registrant_detail)
+                registrant = registrant_map.get(
+                    str(registrant_detail_obj.registrant_id)
+                )
                 gender = registrant.gender if registrant else None
 
                 # For students, entitlement is expected to be a dict of benefit_code_id -> value
-                for benefit_code_id, value in registrant_detail.entitlement.items():
+                for benefit_code_id, value in registrant_detail_obj.entitlement.items():
                     # All entitlements
                     entitlements.setdefault(benefit_code_id, []).append(value)
                     # By gender
@@ -387,14 +413,15 @@ class EEERegistryStudent(EEERegistryInterface):
                             value
                         )
                     else:
-                        raise ValueError(f"Invalid gender: {gender}")
+                        # Accept None gender, but skip for gendered stats
+                        continue
 
         # Compute all summary stats per benefit_code_id
         entitlement_stats = self.compute_stats_dict(entitlements)
         entitlement_male_stats = self.compute_stats_dict(entitlements_male)
         entitlement_female_stats = self.compute_stats_dict(entitlements_female)
 
-        eee_session.execute(
+        bg_task_session.execute(
             update(BeneficiaryListSummaryStudent)
             .where(
                 BeneficiaryListSummaryStudent.beneficiary_list_id == beneficiary_list_id
@@ -416,7 +443,9 @@ class EEERegistryStudent(EEERegistryInterface):
             )
         )
 
-    def compute_stats_dict(self, entitlements_dict: dict[int, list[float]]) -> dict:
+    def compute_stats_dict(
+        self, entitlements_dict: Dict[int, list[float]]
+    ) -> Dict[str, Dict[int, float]]:
         # Returns a dict of stats per benefit_code_id for each stat
         stats = {
             "average": {},

@@ -31,6 +31,6 @@ RUN python3 -m pip install  \
 
 USER ${container_user}
 
-ENV EEE_CELERY_WORKERS_COUNT=4
+ENV BG_TASK_CELERY_WORKERS_COUNT=4
 
-CMD celery -A main.celery_app worker -Q eee_request_queue --loglevel=info --concurrency=${EEE_CELERY_WORKERS_COUNT}
+CMD celery -A main.celery_app worker -Q bg_task_request_queue --loglevel=info --concurrency=${BG_TASK_CELERY_WORKERS_COUNT}

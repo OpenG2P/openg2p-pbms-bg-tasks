@@ -14,6 +14,6 @@ class G2PPriorityRuleDefinition(BaseORMModel):
         Integer, ForeignKey("g2p_disbursement_cycle.id"), nullable=True
     )
     program_id = mapped_column(Integer, nullable=True)
-    target_registry_type = mapped_column(String, nullable=False)
+    target_registry = mapped_column(String, nullable=False)
     pbms_domain = mapped_column(String, nullable=False)
     sql_query = mapped_column(String, nullable=False)

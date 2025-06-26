@@ -1,9 +1,9 @@
 import logging
 
 from openg2p_bg_task_models.models import DisbursementEnvelope
-from openg2p_bg_task_registry_adapters.factory import EEERegistryFactory
-from openg2p_bg_task_registry_adapters.interface import EEERegistryInterface
-from openg2p_bg_task_registry_adapters.schema import EEESummaryPayload
+from openg2p_bg_task_registry_adapters.factory import RegistryFactory
+from openg2p_bg_task_registry_adapters.interface import RegistryInterface
+from openg2p_bg_task_registry_adapters.schema import SummaryPayload
 from openg2p_g2p_bridge_models.schemas import (
     DisbursementEnvelopePayload,
 )
@@ -31,7 +31,7 @@ def create_disbursement_envelope_payload(
     total_disbursement_quantity: float,
     program_definition: G2PProgramDefinition,
     disbursement_cycle: G2PDisbursementCycle,
-    eee_summary_payload: EEESummaryPayload,
+    summary_payload: SummaryPayload,
     pbms_session,
 ) -> DisbursementEnvelopePayload:
     benefit_code: G2PBenefitCodes = (
@@ -49,8 +49,8 @@ def create_disbursement_envelope_payload(
         benefit_type=benefit_code.benefit_type,
         cash_distribution_mode=None,  # TODO: add to pbmsdb table
         disbursement_cycle_id=str(disbursement_cycle.id),
-        number_of_beneficiaries=eee_summary_payload.general_summary.number_of_registrants,
-        number_of_disbursements=eee_summary_payload.general_summary.number_of_registrants,
+        number_of_beneficiaries=summary_payload.general_summary.number_of_registrants,
+        number_of_disbursements=summary_payload.general_summary.number_of_registrants,
         total_disbursement_quantity=total_disbursement_quantity,
         disbursement_schedule_date=disbursement_cycle.disbursement_schedule_date,
         disbursement_frequency=program_definition.disbursement_frequency.value,
@@ -67,11 +67,11 @@ def disbursement_envelope_creation_worker(id: int):
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
-    eee_session_maker = sessionmaker(
-        bind=_engine.get("db_engine_eee"), expire_on_commit=False
+    bg_task_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )
 
-    with pbms_session_maker() as pbms_session, eee_session_maker() as eee_session:
+    with pbms_session_maker() as pbms_session, bg_task_session_maker() as bg_task_session:
         beneficiary_list = None
         try:
             beneficiary_list = (
@@ -94,23 +94,19 @@ def disbursement_envelope_creation_worker(id: int):
                 .first()
             )
 
-            eee_registry_interface: EEERegistryInterface = (
-                EEERegistryFactory.get_registry_class(
-                    program_definition.target_registry_type,
-                )
+            registry_interface: RegistryInterface = RegistryFactory.get_registry_class(
+                program_definition.target_registry,
             )
 
             _logger.info(
                 f"Fetching summary for beneficiary_list_id: {beneficiary_list.beneficiary_list_id}"
             )
 
-            eee_summary_payload: EEESummaryPayload = (
-                eee_registry_interface.get_summary_sync(
-                    beneficiary_list.beneficiary_list_id, eee_session
-                )
+            summary_payload: SummaryPayload = registry_interface.get_summary_sync(
+                beneficiary_list.beneficiary_list_id, bg_task_session
             )
 
-            if not eee_summary_payload:
+            if not summary_payload:
                 raise Exception(
                     f"No summary found for beneficiary_list_id: {beneficiary_list.beneficiary_list_id}"
                 )
@@ -119,13 +115,13 @@ def disbursement_envelope_creation_worker(id: int):
             for (
                 benefit_code_id,
                 total_disbursement_quantity,
-            ) in eee_summary_payload.general_summary.total_entitlement_amount.items():
+            ) in summary_payload.general_summary.total_entitlement_amount.items():
                 disbursement_envelope_payload = create_disbursement_envelope_payload(
                     int(benefit_code_id),
                     total_disbursement_quantity,
                     program_definition,
                     disbursement_cycle,
-                    eee_summary_payload,
+                    summary_payload,
                     pbms_session,
                 )
                 disbursement_envelope_request_message.append(
@@ -154,7 +150,7 @@ def disbursement_envelope_creation_worker(id: int):
             ) in disbursement_envelope_response.message:
                 disbursement_envelope = DisbursementEnvelope(
                     disbursement_envelope_id=disbursement_envelope_reponse_message.disbursement_envelope_id,
-                    beneficiary_list_id=beneficiary_list.id,
+                    beneficiary_list_id=beneficiary_list.beneficiary_list_id,
                     benefit_program_mnemonic=disbursement_envelope_reponse_message.benefit_program_mnemonic,
                     benefit_code_id=int(
                         disbursement_envelope_reponse_message.benefit_code_id
@@ -177,7 +173,7 @@ def disbursement_envelope_creation_worker(id: int):
                 )
 
             # Bulk insert all the disbursement envelopes
-            eee_session.add_all(disbursement_envelopes)
+            bg_task_session.add_all(disbursement_envelopes)
 
             beneficiary_list.disbursement_envelope_status = StatusEnum.COMPLETE.value
             beneficiary_list.disbursement_batch_creation_status = (
@@ -185,7 +181,7 @@ def disbursement_envelope_creation_worker(id: int):
             )
 
             pbms_session.commit()
-            eee_session.commit()
+            bg_task_session.commit()
 
         except Exception as e:
             _logger.error(

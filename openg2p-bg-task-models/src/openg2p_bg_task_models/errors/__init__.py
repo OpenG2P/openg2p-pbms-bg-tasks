@@ -1,2 +1,2 @@
-from .codes import EEEErrorCodes
-from .exceptions import EEEException
+from .codes import BGTaskErrorCodes
+from .exceptions import BGTaskException

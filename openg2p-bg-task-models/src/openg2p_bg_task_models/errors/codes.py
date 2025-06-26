@@ -1,5 +1,5 @@
 import enum
 
 
-class EEEErrorCodes(enum.Enum):
+class BGTaskErrorCodes(enum.Enum):
     INVALID_REQUEST = "INVALID_REQUEST"

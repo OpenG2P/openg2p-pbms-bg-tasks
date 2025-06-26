@@ -63,12 +63,12 @@ class G2PBridgeDisbursementHelper:
             )
             response.raise_for_status()
 
-            envelope_response = DisbursementEnvelopeResponse.model_validate(
-                response.json()
+            disbursement_envelope_response = (
+                DisbursementEnvelopeResponse.model_validate(response.json())
             )
-            self._logger.debug(f"Response: {envelope_response}")
+            self._logger.debug(f"Response: {disbursement_envelope_response}")
 
-            return envelope_response, None
+            return disbursement_envelope_response, None
 
         except Exception as e:
             self._logger.error(
@@ -76,62 +76,61 @@ class G2PBridgeDisbursementHelper:
             )
             return None, str(e)
 
-    def create_disbursement(self, disbursement_batch, eee_session, narrative):
+    def create_disbursement(self, disbursement_batch, bg_task_session, narrative):
         """
         Sends a request to the bridge to create disbursements.
         """
+
+        disbursement_payloads = []
+
+        for disbursement in disbursement_batch.disbursements:
+            disbursement = Disbursement(**disbursement)
+
+            disbursement_payload = DisbursementPayload(
+                # mis_reference_number=disbursement_batch.beneficiary_list_details_id,
+                disbursement_envelope_id=disbursement_batch.disbursement_envelope_id,
+                beneficiary_id=disbursement.beneficiary_id,
+                beneficiary_name="Beneficiary Name",
+                disbursement_amount=disbursement.entitlement,
+                narrative=narrative,
+            )
+            disbursement_payloads.append(disbursement_payload)
+
+        disbursement_header = RequestHeader(
+            version="1.0.0",
+            message_id="string",
+            message_ts="string",
+            action="create_disbursements",
+            sender_id=self._config.sender_id,
+            sender_uri="",
+            receiver_id="",
+            total_count=len(disbursement_payloads),
+            is_msg_encrypted=False,
+            meta="string",
+        )
+
+        disbursement_request = DisbursementRequest(
+            header=disbursement_header, message=disbursement_payloads
+        )
+        disbursement_request_json = disbursement_request.model_dump(mode="json")
+        self._logger.debug(f"Disbursement request payload: {disbursement_request_json}")
+
+        disbursement_url = self._config.g2p_bridge_disbursement_url
+        self._logger.debug(f"Disbursement URL: {disbursement_url}")
+
+        jwt_token = self._create_jwt_token(
+            disbursement_request_json, self._config.private_key
+        )
+
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Signature": jwt_token,
+        }
+        self._logger.info(
+            f"Calling disbursement creation endpoint for disbursement batch id {disbursement_batch.id} having {len(disbursement_payloads)} beneficiaries"
+        )
         try:
-            disbursement_payloads = []
-
-            for disbursement in disbursement_batch.disbursements:
-                disbursement = Disbursement(**disbursement)
-
-                disbursement_payload = DisbursementPayload(
-                    # mis_reference_number=disbursement_batch.beneficiary_list_details_id,
-                    disbursement_envelope_id=disbursement_batch.disbursement_envelope_id,
-                    beneficiary_id=disbursement.beneficiary_id,
-                    beneficiary_name="Beneficiary Name",
-                    disbursement_amount=disbursement.entitlement,
-                    narrative=narrative,
-                )
-                disbursement_payloads.append(disbursement_payload)
-
-            disbursement_header = RequestHeader(
-                version="1.0.0",
-                message_id="string",
-                message_ts="string",
-                action="create_disbursements",
-                sender_id=self._config.sender_id,
-                sender_uri="",
-                receiver_id="",
-                total_count=len(disbursement_payloads),
-                is_msg_encrypted=False,
-                meta="string",
-            )
-
-            disbursement_request = DisbursementRequest(
-                header=disbursement_header, message=disbursement_payloads
-            )
-            disbursement_request_json = disbursement_request.model_dump(mode="json")
-            self._logger.debug(
-                f"Disbursement request payload: {disbursement_request_json}"
-            )
-
-            disbursement_url = self._config.g2p_bridge_disbursement_url
-            self._logger.debug(f"Disbursement URL: {disbursement_url}")
-
-            jwt_token = self._create_jwt_token(
-                disbursement_request_json, self._config.private_key
-            )
-
-            headers = {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Signature": jwt_token,
-            }
-            self._logger.info(
-                f"Calling disbursement creation endpoint for disbursement batch id {disbursement_batch.id} having {len(disbursement_payloads)} beneficiaries"
-            )
             response = requests.post(
                 disbursement_url, json=disbursement_request_json, headers=headers
             )

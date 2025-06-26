@@ -6,7 +6,7 @@ The following beat producers are imported and executed in this order. Each one i
    Fetches G2P beneficiary lists with a PENDING eligibility_process_status from the PBMS database. Updates their status to PROCESSING and sends tasks to the eligibility worker queue for further processing.
 
 2. **Entitlement Beat Producer**
-   Retrieves BeneficiaryListDetails with a PENDING entitlement_status and list_stage set to DISBURSEMENT from the EEE database. Updates their status to PROCESSING and dispatches tasks to the entitlement worker queue.
+   Retrieves BeneficiaryListDetails with a PENDING entitlement_status and list_stage set to DISBURSEMENT from the BG Task database. Updates their status to PROCESSING and dispatches tasks to the entitlement worker queue.
 
 3. **Disbursement Envelope Creation Beat Producer**
    Selects entitlement records that are ready for envelope creation based on specific status and stage criteria. Updates their status and queues tasks for envelope creation processing.
@@ -16,5 +16,3 @@ The following beat producers are imported and executed in this order. Each one i
 
 5. **Disbursement Beat Producer**
    Finds disbursement batches that are ready for final disbursement actions. Updates their status and queues tasks for processing the disbursement.
-
-#TODO: rename project to openg2p_pbms_bg_tasks -> eee to pbms_bg

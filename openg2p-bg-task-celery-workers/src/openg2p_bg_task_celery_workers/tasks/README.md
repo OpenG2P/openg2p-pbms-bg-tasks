@@ -19,4 +19,4 @@ The following worker tasks are responsible for processing background jobs that h
 
 ---
 
-Each worker task is designed to be idempotent and robust, ensuring that failures can be retried without data corruption. The workers interact with the PBMS, EEE, and Social Registry databases as needed, and log progress for monitoring and debugging.
+Each worker task is designed to be idempotent and robust, ensuring that failures can be retried without data corruption. The workers interact with the PBMS, BG Task, and Social Registry databases as needed, and log progress for monitoring and debugging.

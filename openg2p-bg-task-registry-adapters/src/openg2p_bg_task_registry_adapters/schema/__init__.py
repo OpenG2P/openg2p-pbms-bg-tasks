@@ -1,11 +1,11 @@
-from .beneficiary_list_summary import EEEGeneralSummary, EEESummaryPayload
+from .beneficiary_list_summary import GeneralSummary, SummaryPayload
 from .beneficiary_list_summary_farmer import (
-    EEESummaryFarmerPayload,
     RegistrySummaryFarmerPayload,
+    SummaryFarmerPayload,
 )
 from .beneficiary_list_summary_student import (
-    EEESummaryStudentPayload,
     RegistrySummaryStudentPayload,
+    SummaryStudentPayload,
 )
 from .registry import G2PRegistryPayload
 from .registry_farmer import G2PFarmerRegistryPayload
