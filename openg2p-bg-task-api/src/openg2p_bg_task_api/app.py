@@ -1,0 +1,51 @@
+# ruff: noqa: E402
+import asyncio
+import logging
+
+from openg2p_bg_task_models.models import (
+    BeneficiaryListDetails,
+    BeneficiaryListSummary,
+    DisbursementBatch,
+    DisbursementEnvelope,
+)
+from openg2p_bg_task_registry_adapters.cache import init_cache
+from openg2p_fastapi_common.app import Initializer as BaseInitializer
+from openg2p_fastapi_common.context import dbengine
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from .config import Settings
+from .controllers import EEEBeneficiarySearchController, EEESummaryController
+from .services import EEEBeneficiarySearchService, EEESummaryService
+
+_config = Settings.get_config()
+_logger = logging.getLogger(_config.logging_default_logger_name)
+
+
+class Initializer(BaseInitializer):
+    def initialize(self, **kwargs):
+        super().initialize()
+        init_cache()
+        EEESummaryService()
+        EEEBeneficiarySearchService()
+        EEESummaryController().post_init()
+        EEEBeneficiarySearchController().post_init()
+
+    def init_db(self):
+        if _config.db_datasource:
+            db_engine = create_async_engine(
+                _config.db_datasource_eee, echo=_config.db_logging
+            )
+            dbengine.set(db_engine)
+
+    def migrate_database(self, args):
+        _logger.info(f"Database migration completed{_config.db_datasource_eee}")
+        super().migrate_database(args)
+
+        async def migrate():
+            _logger.info("Migrating database")
+            await DisbursementBatch.create_migrate()
+            await DisbursementEnvelope.create_migrate()
+            await BeneficiaryListDetails.create_migrate()
+            await BeneficiaryListSummary.create_migrate()
+
+        asyncio.run(migrate())
