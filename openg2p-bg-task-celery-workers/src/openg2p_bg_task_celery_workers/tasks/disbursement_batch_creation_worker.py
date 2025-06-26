@@ -92,7 +92,7 @@ def disbursement_batch_creation_worker(id: int):
                         disbursement_envelope_id=disbursement_envelope.disbursement_envelope_id,
                         disbursement_cycle_id=disbursement_envelope.disbursement_cycle_id,
                         beneficiary_list_details_id=beneficiary_list_detail.id,
-                        beneficiary_list_id=beneficiary_list.id,
+                        beneficiary_list_id=beneficiary_list.beneficiary_list_id,
                     )
                     disbursement_batches.append(disbursement_batch)
 

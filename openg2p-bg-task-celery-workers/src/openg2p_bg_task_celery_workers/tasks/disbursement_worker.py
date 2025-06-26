@@ -46,7 +46,7 @@ def disbursement_worker(id: int):
 
             beneficiary_list = (
                 pbms_session.query(G2PBeneficiaryList)
-                .filter(G2PBeneficiaryList.id == disbursement_batch.beneficiary_list_id)
+                .filter(G2PBeneficiaryList.beneficiary_list_id == disbursement_batch.beneficiary_list_id)
                 .first()
             )
 
