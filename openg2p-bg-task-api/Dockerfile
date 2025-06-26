@@ -23,7 +23,7 @@ RUN python3 -m pip install \
   openg2p-fastapi-auth==1.1.1 \
   git+https://github.com/OpenG2P/openg2p-g2pconnect-common-lib@1.1.0\#subdirectory=openg2p-g2pconnect-common-lib \
   git+https://github.com/OpenG2P/openg2p-g2pconnect-common-lib@1.1.0\#subdirectory=openg2p-g2pconnect-mapper-lib \
-  git+https://github.com/openg2p/openg2p-pbms-gen2-bg-tasks@v1.0\#subdirectory=openg2p-registry-adapters \
+  git+https://github.com/openg2p/openg2p-pbms-gen2-bg-tasks@v1.1\#subdirectory=openg2p-registry-adapters \
   ./src
 
 USER ${container_user}
