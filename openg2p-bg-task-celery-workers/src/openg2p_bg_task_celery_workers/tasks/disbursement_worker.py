@@ -120,7 +120,7 @@ def disbursement_worker(id: int):
             disbursement_batch.disbursement_status = StatusEnum.COMPLETE.value
             eee_session.commit()
             _logger.info(
-                f"Disbursements created successfully for disbursment batch id: {id}"
+                f"Disbursements created successfully for disbursement batch id: {id}"
             )
 
         except Exception as e:

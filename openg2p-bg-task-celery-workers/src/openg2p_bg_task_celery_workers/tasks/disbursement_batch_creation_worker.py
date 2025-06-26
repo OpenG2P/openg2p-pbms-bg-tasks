@@ -23,7 +23,7 @@ _engine = get_engine()
 @celery_app.task(name="disbursement_batch_creation_worker")
 def disbursement_batch_creation_worker(id: int):
     _logger.info(
-        f"Starting disbursment batch creation request for benefiicary list id: {id}"
+        f"Starting disbursement batch creation request for benefiicary list id: {id}"
     )
 
     pbms_session_maker = sessionmaker(

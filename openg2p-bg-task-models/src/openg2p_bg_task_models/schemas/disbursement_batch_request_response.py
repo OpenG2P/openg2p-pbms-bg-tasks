@@ -13,7 +13,7 @@ class DisbursementBatchRequestPayload(BaseModel):
 
 class DisbursementBatchResponsePayload(BaseModel):
     beneficiary_list_id: str
-    disbursement_envelopes: List[dict]
+    disbursement_batches: List[dict]
 
 
 class DisbursementBatchRequest(Request):

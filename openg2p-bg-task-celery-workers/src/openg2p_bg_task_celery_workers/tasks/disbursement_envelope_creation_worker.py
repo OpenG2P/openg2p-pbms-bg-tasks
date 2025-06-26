@@ -150,30 +150,30 @@ def disbursement_envelope_creation_worker(id: int):
 
             disbursement_envelopes = []
             for (
-                disbursment_envelope_reponse_message
+                disbursement_envelope_reponse_message
             ) in disbursement_envelope_response.message:
                 disbursement_envelope = DisbursementEnvelope(
-                    disbursement_envelope_id=disbursment_envelope_reponse_message.disbursement_envelope_id,
+                    disbursement_envelope_id=disbursement_envelope_reponse_message.disbursement_envelope_id,
                     beneficiary_list_id=beneficiary_list.id,
-                    benefit_program_mnemonic=disbursment_envelope_reponse_message.benefit_program_mnemonic,
+                    benefit_program_mnemonic=disbursement_envelope_reponse_message.benefit_program_mnemonic,
                     benefit_code_id=int(
-                        disbursment_envelope_reponse_message.benefit_code_id
+                        disbursement_envelope_reponse_message.benefit_code_id
                     ),
-                    benefit_type=disbursment_envelope_reponse_message.benefit_type.value,
-                    cash_distribution_mode=disbursment_envelope_reponse_message.cash_distribution_mode.value,
+                    benefit_type=disbursement_envelope_reponse_message.benefit_type.value,
+                    cash_distribution_mode=disbursement_envelope_reponse_message.cash_distribution_mode.value,
                     disbursement_cycle_id=int(
-                        disbursment_envelope_reponse_message.disbursement_cycle_id
+                        disbursement_envelope_reponse_message.disbursement_cycle_id
                     ),
-                    cycle_code_mnemonic=disbursment_envelope_reponse_message.cycle_code_mnemonic,
-                    number_of_beneficiaries=disbursment_envelope_reponse_message.number_of_beneficiaries,
-                    number_of_disbursements=disbursment_envelope_reponse_message.number_of_disbursements,
-                    total_disbursement_quantity=disbursment_envelope_reponse_message.total_disbursement_quantity,
-                    measurement_unit=disbursment_envelope_reponse_message.measurement_unit,
-                    disbursement_schedule_date=disbursment_envelope_reponse_message.disbursement_schedule_date,
+                    cycle_code_mnemonic=disbursement_envelope_reponse_message.cycle_code_mnemonic,
+                    number_of_beneficiaries=disbursement_envelope_reponse_message.number_of_beneficiaries,
+                    number_of_disbursements=disbursement_envelope_reponse_message.number_of_disbursements,
+                    total_disbursement_quantity=disbursement_envelope_reponse_message.total_disbursement_quantity,
+                    measurement_unit=disbursement_envelope_reponse_message.measurement_unit,
+                    disbursement_schedule_date=disbursement_envelope_reponse_message.disbursement_schedule_date,
                 )
                 disbursement_envelopes.append(disbursement_envelope)
                 _logger.info(
-                    f"Envelope creation successful for disbursement envelope id: {disbursment_envelope_reponse_message.disbursement_envelope_id}"
+                    f"Envelope creation successful for disbursement envelope id: {disbursement_envelope_reponse_message.disbursement_envelope_id}"
                 )
 
             # Bulk insert all the disbursement envelopes
