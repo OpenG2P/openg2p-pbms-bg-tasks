@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from openg2p_pbms_models.models import G2PQueEEERequest, StatusEnum
+from openg2p_pbms_models.models import G2PBeneficiaryList, StatusEnum
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -14,19 +14,19 @@ _logger = logging.getLogger(_config.logging_default_logger_name)
 _engine = get_engine()
 
 
-@celery_app.task(name="eee_eligibility_beat_producer")
-def eee_eligibility_beat_producer():
+@celery_app.task(name="beneficiary_list_beat_producer")
+def beneficiary_list_beat_producer():
     _logger.info("Checking for pending EEE eligibility requests")
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
     with pbms_session_maker() as pbms_session:
         # Fetch rows with PENDING status
-        que_eee_requests: List[G2PQueEEERequest] = (
+        beneficiary_lists: List[G2PBeneficiaryList] = (
             pbms_session.execute(
-                select(G2PQueEEERequest)
+                select(G2PBeneficiaryList)
                 .filter(
-                    G2PQueEEERequest.eligibility_process_status
+                    G2PBeneficiaryList.eligibility_process_status
                     == StatusEnum.PENDING.value
                 )
                 .limit(_config.batch_size)
@@ -34,26 +34,26 @@ def eee_eligibility_beat_producer():
             .scalars()
             .all()
         )
-        _logger.info(f"Found {len(que_eee_requests)} pending eligibility requests")
+        _logger.info(f"Found {len(beneficiary_lists)} pending eligibility requests")
 
-        for que_eee_request in que_eee_requests:
-            _logger.info(f"Queueing EEE eligibility request ID: {que_eee_request.id}")
+        for beneficiary_list in beneficiary_lists:
+            _logger.info(f"Queueing EEE eligibility request ID: {beneficiary_list.id}")
 
-            que_eee_request.eligibility_process_status = StatusEnum.PROCESSING.value
-            pbms_session.add(que_eee_request)
+            beneficiary_list.eligibility_process_status = StatusEnum.PROCESSING.value
+            pbms_session.add(beneficiary_list)
 
             _logger.info(
-                f"Updating status for {WorkerTypes.ELIGIBILITY_REQUEST_WORKER} to PROCESSING in EEE eligibility request ID: {que_eee_request.id}"
+                f"Updating status for {WorkerTypes.BENEFICIARY_LIST_WORKER} to PROCESSING in EEE eligibility request ID: {beneficiary_list.id}"
             )
 
             # Send task to appropriate celery worker
             celery_app.send_task(
-                WorkerTypes.ELIGIBILITY_REQUEST_WORKER,
-                args=(que_eee_request.id,),
+                WorkerTypes.BENEFICIARY_LIST_WORKER,
+                args=(beneficiary_list.id,),
                 queue=_config.eee_task_worker_queue,
             )
             _logger.info(
-                f"Sent task to {WorkerTypes.ELIGIBILITY_REQUEST_WORKER} for EEE eligibility request ID: {que_eee_request.id}"
+                f"Sent task to {WorkerTypes.BENEFICIARY_LIST_WORKER} for EEE eligibility request ID: {beneficiary_list.id}"
             )
         pbms_session.commit()
 

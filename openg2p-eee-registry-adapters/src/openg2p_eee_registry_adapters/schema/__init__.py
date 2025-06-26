@@ -1,9 +1,9 @@
-from .eee_summary import EEEGeneralSummary, EEESummaryPayload
-from .eee_summary_farmer import (
+from .beneficiary_list_summary import EEEGeneralSummary, EEESummaryPayload
+from .beneficiary_list_summary_farmer import (
     EEESummaryFarmerPayload,
     RegistrySummaryFarmerPayload,
 )
-from .eee_summary_student import (
+from .beneficiary_list_summary_student import (
     EEESummaryStudentPayload,
     RegistrySummaryStudentPayload,
 )

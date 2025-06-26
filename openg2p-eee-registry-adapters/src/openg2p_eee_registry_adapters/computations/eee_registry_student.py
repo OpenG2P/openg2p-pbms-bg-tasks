@@ -1,12 +1,11 @@
 import json
 import logging
-from collections import defaultdict
 from datetime import date
 from typing import List
 
 import numpy as np
 from fastapi_cache.decorator import cache
-from openg2p_eee_models.models import EEEDetails
+from openg2p_eee_models.models import BeneficiaryListDetails
 from openg2p_eee_models.schemas import (
     EEEBeneficiarySearchResponsePayload,
     RegistrantDetails,
@@ -19,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from ..cache import beneficiary_count_key_builder
 from ..interface import EEERegistryInterface
-from ..models import EEESummaryStudent, G2PStudentRegistry
+from ..models import BeneficiaryListSummaryStudent, G2PStudentRegistry
 from ..schema import (
     EEEGeneralSummary,
     EEESummaryStudentPayload,
@@ -37,13 +36,13 @@ class EEERegistryStudent(EEERegistryInterface):
     # Summary API Methods
     # ===================
     async def get_summary(
-        self, pbms_request_id: int, eee_session: AsyncSession
+        self, beneficiary_list_id: int, eee_session: AsyncSession
     ) -> EEESummaryStudentPayload:
-        _logger.info(f"Fetching summary for pbms_request_id: {pbms_request_id}")
+        _logger.info(f"Fetching summary for beneficiary_list_id: {beneficiary_list_id}")
         _logger.info(f"Type of session: {(eee_session)}")
         eligibility_summary_student = await eee_session.execute(
-            select(EEESummaryStudent).where(
-                EEESummaryStudent.pbms_request_id == pbms_request_id
+            select(BeneficiaryListSummaryStudent).where(
+                BeneficiaryListSummaryStudent.beneficiary_list_id == beneficiary_list_id
             )
         )
         eligibility_summary_student = eligibility_summary_student.scalars().first()
@@ -54,7 +53,7 @@ class EEERegistryStudent(EEERegistryInterface):
                 program_id=eligibility_summary_student.program_id,
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
                 target_registry_type=eligibility_summary_student.target_registry_type,
-                pbms_request_id=eligibility_summary_student.pbms_request_id,
+                beneficiary_list_id=eligibility_summary_student.beneficiary_list_id,
                 number_of_registrants=format(
                     eligibility_summary_student.number_of_registrants, ","
                 ),
@@ -92,11 +91,11 @@ class EEERegistryStudent(EEERegistryInterface):
         return summary
 
     def get_summary_sync(
-        self, pbms_request_id: str, eee_session: Session
+        self, beneficiary_list_id: str, eee_session: Session
     ) -> EEESummaryStudentPayload:
         eligibility_summary_student = (
-            eee_session.query(EEESummaryStudent)
-            .filter_by(pbms_request_id=pbms_request_id)
+            eee_session.query(BeneficiaryListSummaryStudent)
+            .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
 
@@ -106,7 +105,7 @@ class EEERegistryStudent(EEERegistryInterface):
                 program_id=eligibility_summary_student.program_id,
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
                 target_registry_type=eligibility_summary_student.target_registry_type,
-                pbms_request_id=eligibility_summary_student.pbms_request_id,
+                beneficiary_list_id=eligibility_summary_student.beneficiary_list_id,
                 number_of_registrants=eligibility_summary_student.number_of_registrants,
                 date_created=eligibility_summary_student.date_created,
                 total_entitlement_amount=eligibility_summary_student.total_entitlement_amount,
@@ -140,7 +139,7 @@ class EEERegistryStudent(EEERegistryInterface):
         self,
         eee_session: AsyncSession,
         sr_session: AsyncSession,
-        pbms_request_id: str,
+        beneficiary_list_id: str,
         target_registry_type: str,
         search_query,
         page=1,
@@ -148,8 +147,8 @@ class EEERegistryStudent(EEERegistryInterface):
         order_by="id asc",
     ) -> EEEBeneficiarySearchResponsePayload:
         registrant_details = await eee_session.execute(
-            select(EEEDetails.registrant_details).where(
-                EEEDetails.pbms_request_id == pbms_request_id
+            select(BeneficiaryListDetails.registrant_details).where(
+                BeneficiaryListDetails.beneficiary_list_id == beneficiary_list_id
             )
         )
         registrant_details = registrant_details.scalars().all()
@@ -177,7 +176,7 @@ class EEERegistryStudent(EEERegistryInterface):
         )
 
         total_beneficiary_count = await self._get_total_beneficiary_count(
-            sr_session, pbms_request_id, registrant_ids, search_query
+            sr_session, beneficiary_list_id, registrant_ids, search_query
         )
 
         beneficiaries = []
@@ -207,7 +206,7 @@ class EEERegistryStudent(EEERegistryInterface):
     async def _get_total_beneficiary_count(
         self,
         sr_session: AsyncSession,
-        pbms_request_id: str,
+        beneficiary_list_id: str,
         registrant_ids: List[str],
         search_query: str,
     ) -> int:
@@ -228,27 +227,27 @@ class EEERegistryStudent(EEERegistryInterface):
     # =================================
     def compute_and_persist_summary(
         self,
-        eee_details: List[dict],
+        beneficiary_list_details: List[dict],
         base_summary,
         sr_session: Session,
         eee_session: Session,
     ):
         students_age = []
 
-        for eee_detail in eee_details:
+        for beneficiary_list_detail in beneficiary_list_details:
             registrant_ids = []
-            for registrant in json.loads(eee_detail["registrant_details"]):
+            for registrant in json.loads(beneficiary_list_detail["registrant_details"]):
                 registrant_ids.append(registrant["registrant_id"])
 
             registrants = self.get_registrants_by_ids(registrant_ids, sr_session)
             for student in registrants:
                 students_age.append(self.calculate_age(student.date_of_birth))
 
-        student_summary = EEESummaryStudent(
+        student_summary = BeneficiaryListSummaryStudent(
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
             target_registry_type=base_summary.target_registry_type,
-            pbms_request_id=base_summary.pbms_request_id,
+            beneficiary_list_id=base_summary.beneficiary_list_id,
             number_of_registrants=base_summary.number_of_registrants,
             date_created=base_summary.date_created,
         )
@@ -290,12 +289,12 @@ class EEERegistryStudent(EEERegistryInterface):
     # Entitlement Celery Worker Methods
     # =================================
     def lock_and_update_summary(
-        self, number_of_registrants: int, pbms_request_id: str, eee_session: Session
+        self, number_of_registrants: int, beneficiary_list_id: str, eee_session: Session
     ) -> None:
         try:
             summary_student = (
-                eee_session.query(EEESummaryStudent)
-                .filter_by(pbms_request_id=pbms_request_id)
+                eee_session.query(BeneficiaryListSummaryStudent)
+                .filter_by(beneficiary_list_id=beneficiary_list_id)
                 .with_for_update()
                 .one()
             )
@@ -315,12 +314,26 @@ class EEERegistryStudent(EEERegistryInterface):
         result = sr_session.execute(sql_query_with_registrant_id).fetchone()
         return result is not None
 
+    def get_entitlement_multiplier(
+        self, multiplier: str, registrant_id: str, sr_session: Session
+    ) -> int:
+        if not multiplier or multiplier == "none":
+            return 1
+
+        sql_query = self.construct_multiplier_sql_query(
+            multiplier, target_registry_type="student"
+        )
+        params = {"registrant_id": registrant_id}
+        multiplier_value: int = sr_session.execute(sql_query, params).fetchone()
+
+        return multiplier_value
+
     def compute_entitlements_and_modify_summary(
-        self, pbms_request_id: str, eee_session: Session, sr_session: Session
+        self, beneficiary_list_id: str, eee_session: Session, sr_session: Session
     ):
         summary_student = (
-            eee_session.query(EEESummaryStudent)
-            .filter_by(pbms_request_id=pbms_request_id)
+            eee_session.query(BeneficiaryListSummaryStudent)
+            .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
 
@@ -330,17 +343,17 @@ class EEERegistryStudent(EEERegistryInterface):
         ):
             return
 
-        eee_details = (
-            eee_session.query(EEEDetails)
-            .filter_by(pbms_request_id=pbms_request_id)
+        beneficiary_list_details = (
+            eee_session.query(BeneficiaryListDetails)
+            .filter_by(beneficiary_list_id=beneficiary_list_id)
             .all()
         )
 
-        registrant_map: dict[str, G2PStudentRegistry] = defaultdict(list)
+        registrant_map: dict[str, G2PStudentRegistry] = {}
 
-        for eee_detail in eee_details:
+        for beneficiary_list_detail in beneficiary_list_details:
             registrant_ids = []
-            for registrant_detail in eee_detail.registrant_details:
+            for registrant_detail in beneficiary_list_detail.registrant_details:
                 registrant_detail = RegistrantDetails(**registrant_detail)
                 registrant_ids.append(registrant_detail.registrant_id)
 
@@ -351,60 +364,85 @@ class EEERegistryStudent(EEERegistryInterface):
             for registrant in registrants_list:
                 registrant_map[str(registrant.unique_id)] = registrant
 
-        entitlements = []
-        entitlements_male = []
-        entitlements_female = []
+        # Collect entitlements per benefit_code_id
+        entitlements: dict[int, list[float]] = {}
+        entitlements_male: dict[int, list[float]] = {}
+        entitlements_female: dict[int, list[float]] = {}
 
-        for eee_detail in eee_details:
-            for registrant_detail in eee_detail.registrant_details:
+        for beneficiary_list_detail in beneficiary_list_details:
+            for registrant_detail in beneficiary_list_detail.registrant_details:
                 registrant_detail = RegistrantDetails(**registrant_detail)
-                entitlements.append(registrant_detail.entitlement_quantity)
-
                 registrant = registrant_map.get(str(registrant_detail.registrant_id))
-
                 gender = registrant.gender if registrant else None
 
-                if gender == Gender.MALE.value:
-                    entitlements_male.append(registrant_detail.entitlement_quantity)
-                elif gender == Gender.FEMALE.value:
-                    entitlements_female.append(registrant_detail.entitlement_quantity)
-                else:
-                    raise ValueError(f"Invalid gender: {gender}")
+                # For students, entitlement is expected to be a dict of benefit_code_id -> value
+                for benefit_code_id, value in registrant_detail.entitlement.items():
+                    # All entitlements
+                    entitlements.setdefault(benefit_code_id, []).append(value)
+                    # By gender
+                    if gender == Gender.MALE.value:
+                        entitlements_male.setdefault(benefit_code_id, []).append(value)
+                    elif gender == Gender.FEMALE.value:
+                        entitlements_female.setdefault(benefit_code_id, []).append(
+                            value
+                        )
+                    else:
+                        raise ValueError(f"Invalid gender: {gender}")
 
-        # Compute all summary stats
-        entitlement_stats = self.compute_stats(entitlements)
-        entitlement_male_stats = self.compute_stats(entitlements_male)
-        entitlement_female_stats = self.compute_stats(entitlements_female)
+        # Compute all summary stats per benefit_code_id
+        entitlement_stats = self.compute_stats_dict(entitlements)
+        entitlement_male_stats = self.compute_stats_dict(entitlements_male)
+        entitlement_female_stats = self.compute_stats_dict(entitlements_female)
 
         eee_session.execute(
-            update(EEESummaryStudent)
-            .where(EEESummaryStudent.pbms_request_id == pbms_request_id)
+            update(BeneficiaryListSummaryStudent)
+            .where(
+                BeneficiaryListSummaryStudent.beneficiary_list_id == beneficiary_list_id
+            )
             .values(
-                total_entitlement_amount=entitlement_stats["total"],
-                average_entitlement_per_person=entitlement_stats["average"],
-                entitlement_amount_q1=entitlement_stats["q1"],
-                entitlement_amount_q2=entitlement_stats["q2"],
-                entitlement_amount_q3=entitlement_stats["q3"],
-                average_entitlement_male=entitlement_male_stats["average"],
-                entitlement_amount_male_q1=entitlement_male_stats["q1"],
-                entitlement_amount_male_q2=entitlement_male_stats["q2"],
-                entitlement_amount_male_q3=entitlement_male_stats["q3"],
-                average_entitlement_female=entitlement_female_stats["average"],
-                entitlement_amount_female_q1=entitlement_female_stats["q1"],
-                entitlement_amount_female_q2=entitlement_female_stats["q2"],
-                entitlement_amount_female_q3=entitlement_female_stats["q3"],
+                total_entitlement_amount=dict(entitlement_stats["total"]),
+                average_entitlement_per_person=dict(entitlement_stats["average"]),
+                entitlement_amount_q1=dict(entitlement_stats["q1"]),
+                entitlement_amount_q2=dict(entitlement_stats["q2"]),
+                entitlement_amount_q3=dict(entitlement_stats["q3"]),
+                average_entitlement_male=dict(entitlement_male_stats["average"]),
+                entitlement_amount_male_q1=dict(entitlement_male_stats["q1"]),
+                entitlement_amount_male_q2=dict(entitlement_male_stats["q2"]),
+                entitlement_amount_male_q3=dict(entitlement_male_stats["q3"]),
+                average_entitlement_female=dict(entitlement_female_stats["average"]),
+                entitlement_amount_female_q1=dict(entitlement_female_stats["q1"]),
+                entitlement_amount_female_q2=dict(entitlement_female_stats["q2"]),
+                entitlement_amount_female_q3=dict(entitlement_female_stats["q3"]),
             )
         )
 
-    def compute_stats(self, input_list: List[float]) -> dict:
-        if not input_list:
-            return {"average": 0.0, "q1": 0.0, "q2": 0.0, "q3": 0.0, "total": 0.0}
-
-        arr = np.array(input_list)
-        return {
-            "average": round(float(np.mean(arr)), 2),
-            "q1": round(float(np.percentile(arr, 25, method="midpoint")), 2),
-            "q2": round(float(np.percentile(arr, 50, method="midpoint")), 2),
-            "q3": round(float(np.percentile(arr, 75, method="midpoint")), 2),
-            "total": float(np.sum(arr)),
+    def compute_stats_dict(self, entitlements_dict: dict[int, list[float]]) -> dict:
+        # Returns a dict of stats per benefit_code_id for each stat
+        stats = {
+            "average": {},
+            "q1": {},
+            "q2": {},
+            "q3": {},
+            "total": {},
         }
+        for benefit_code_id, values in entitlements_dict.items():
+            if not values:
+                stats["average"][benefit_code_id] = 0.0
+                stats["q1"][benefit_code_id] = 0.0
+                stats["q2"][benefit_code_id] = 0.0
+                stats["q3"][benefit_code_id] = 0.0
+                stats["total"][benefit_code_id] = 0.0
+            else:
+                arr = np.array(values)
+                stats["average"][benefit_code_id] = round(float(np.mean(arr)), 2)
+                stats["q1"][benefit_code_id] = round(
+                    float(np.percentile(arr, 25, method="midpoint")), 2
+                )
+                stats["q2"][benefit_code_id] = round(
+                    float(np.percentile(arr, 50, method="midpoint")), 2
+                )
+                stats["q3"][benefit_code_id] = round(
+                    float(np.percentile(arr, 75, method="midpoint")), 2
+                )
+                stats["total"][benefit_code_id] = float(np.sum(arr))
+        return stats

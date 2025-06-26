@@ -37,16 +37,20 @@ celery_app = Celery(
 )
 
 celery_app.conf.beat_schedule = {
-    "eee_eligibility_beat_producer": {
-        "task": "eee_eligibility_beat_producer",
+    "beneficiary_list_beat_producer": {
+        "task": "beneficiary_list_beat_producer",
         "schedule": _config.producer_frequency,
     },
-    "eee_entitlement_beat_producer": {
-        "task": "eee_entitlement_beat_producer",
+    "entitlement_beat_producer": {
+        "task": "entitlement_beat_producer",
         "schedule": _config.producer_frequency,
     },
-    "envelope_batch_beat_producer": {
-        "task": "envelop_batch_beat_producer",
+    "disbursement_envelope_creation_beat_producer": {
+        "task": "disbursement_envelope_creation_beat_producer",
+        "schedule": _config.producer_frequency,
+    },
+    "disbursement_batch_creation_beat_producer": {
+        "task": "disbursement_batch_creation_beat_producer",
         "schedule": _config.producer_frequency,
     },
     "disbursement_beat_producer": {
