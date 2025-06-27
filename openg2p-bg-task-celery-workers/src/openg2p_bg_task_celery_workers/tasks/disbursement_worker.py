@@ -53,6 +53,7 @@ def disbursement_worker(id: int):
                 .first()
             )
 
+            # Get the mnemonics and construct narative for disbursement
             disbursement_cycle_mnemonic = (
                 pbms_session.query(G2PDisbursementCycle.cycle_mnemonic)
                 .filter(
@@ -83,6 +84,7 @@ def disbursement_worker(id: int):
                 disbursement_cycle_mnemonic, program_mnemonic
             )
 
+            # Use the helper class for disbursement creation
             bridge_disbursement_helper = G2PBridgeDisbursementHelper(
                 _config, _logger, create_jwt_token
             )

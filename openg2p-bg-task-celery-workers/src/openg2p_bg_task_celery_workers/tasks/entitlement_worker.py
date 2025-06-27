@@ -221,9 +221,10 @@ def entitlement_worker(id: int):
         except Exception as e:
             error_message = f"Error during processing entitlement request for beneficiary list id {id}: {str(e)}"
             _logger.error(error_message)
-            if beneficiary_list:
-                beneficiary_list.processed_date = datetime.now(timezone.utc)
-                # queue_entry.task_status = StatusEnum.FAILED
+            if beneficiary_list and beneficiary_list_details:
+                beneficiary_list_details.entitlement_status = StatusEnum.PENDING.value
+                beneficiary_list.entitlement_process_status = StatusEnum.PENDING.value
+                bg_task_session.commit()
                 pbms_session.commit()
 
         _logger.info(

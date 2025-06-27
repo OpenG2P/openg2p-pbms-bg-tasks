@@ -72,6 +72,7 @@ def disbursement_batch_creation_worker(id: int):
                 f"Total disbursement envelopes fetched from BeneficiaryListDetails: {len(disbursement_envelopes)}"
             )
 
+            # Iterate over disbursement envelopes and beneficiary list details to create disbursement batches
             disbursement_batches = []
             for disbursement_envelope in disbursement_envelopes:
                 for beneficiary_list_detail in beneficiary_list_details:
@@ -97,6 +98,7 @@ def disbursement_batch_creation_worker(id: int):
                     disbursement_batches.append(disbursement_batch)
 
             _logger.info(f"disbursement batches: {disbursement_batches}")
+
             # Bulk insert all the disbursement batches
             bg_task_session.add_all(disbursement_batches)
 
@@ -116,3 +118,9 @@ def disbursement_batch_creation_worker(id: int):
 
         except Exception as e:
             _logger.error(f"Error in batch creation request worker: {e}")
+
+            if beneficiary_list:
+                beneficiary_list.disbursement_batch_creation_status = (
+                    StatusEnum.PENDING.value
+                )
+                pbms_session.commit()

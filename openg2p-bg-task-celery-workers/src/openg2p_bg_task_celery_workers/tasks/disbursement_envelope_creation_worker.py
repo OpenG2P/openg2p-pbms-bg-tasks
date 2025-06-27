@@ -94,6 +94,7 @@ def disbursement_envelope_creation_worker(id: int):
                 .first()
             )
 
+            # Get the appropriate registry interface for the program's target registry
             registry_interface: RegistryInterface = RegistryFactory.get_registry_class(
                 program_definition.target_registry,
             )

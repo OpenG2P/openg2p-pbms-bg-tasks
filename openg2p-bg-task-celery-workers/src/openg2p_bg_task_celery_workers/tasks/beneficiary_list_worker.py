@@ -109,8 +109,7 @@ def beneficiary_list_worker(id: int):
                     if latest_beneficiary_list_details:
                         approved_registrant_details = latest_beneficiary_list_details
 
-                # Unpack approved_registrant_details and extract registrant_ids
-                # push to another worker for processing priority rule and entitlement on existing registrant_ids
+                # Get approved registrant details for the latest approved final enrollment
                 registrant_ids = []
                 for approved_registrant_detail in approved_registrant_details:
                     if approved_registrant_detail:
@@ -122,6 +121,7 @@ def beneficiary_list_worker(id: int):
                             registrant["registrant_id"] for registrant in details_list
                         ]
 
+                # Fetch priority rule SQL queries for the current disbursement cycle and construct the priority query using the list of registrant IDs
                 sql_queries = (
                     pbms_session.execute(
                         select(G2PPriorityRuleDefinition.sql_query).where(
@@ -144,6 +144,7 @@ def beneficiary_list_worker(id: int):
                 f"Constructed sql query for beneficiary list id {id} is: {constructed_query}"
             )
 
+            # Execute the constructed SQL query to fetch registrant details and build BeneficiaryListDetails objects
             total_number_of_registrants = 0
             beneficiary_list_details = []
             cursor = sr_session.execute(constructed_query)
@@ -245,7 +246,7 @@ def beneficiary_list_worker(id: int):
 
             if beneficiary_list:
                 beneficiary_list.processed_date = datetime.now(timezone.utc)
-                # queue_entry.task_status = StatusEnum.FAILED
+                beneficiary_list.eligibility_process_status = StatusEnum.PENDING.value
                 pbms_session.commit()
 
         _logger.info(
