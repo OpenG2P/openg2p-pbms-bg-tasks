@@ -6,7 +6,7 @@ The following worker tasks are responsible for processing background jobs that h
    Processes G2P beneficiary lists with a PROCESSING eligibility_process_status. Runs eligibility checks and updates the status to reflect the outcome (e.g., ELIGIBLE, INELIGIBLE, or ERROR).
 
 2. **Entitlement Worker**
-   Handles BeneficiaryListDetails with a PROCESSING entitlement_status. Calculates entitlements for eligible beneficiaries and updates their entitlement records accordingly.
+   Handles BeneficiaryListDetails with a PROCESSING entitlement_process_status. Calculates entitlements for eligible beneficiaries and updates their entitlement records accordingly.
 
 3. **Disbursement Envelope Creation Worker**
    Processes entitlement records that are ready for envelope creation. Generates disbursement envelopes and updates their status to indicate readiness for batch grouping.

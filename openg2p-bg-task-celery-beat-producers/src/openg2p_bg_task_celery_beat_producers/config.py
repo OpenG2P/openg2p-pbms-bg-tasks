@@ -31,4 +31,4 @@ class Settings(BaseSettings):
     bg_task_worker_queue: str = "bg_task_worker_queue"
 
     producer_frequency: int = 10
-    batch_size: int = 10000
+    batch_size: int = 2000

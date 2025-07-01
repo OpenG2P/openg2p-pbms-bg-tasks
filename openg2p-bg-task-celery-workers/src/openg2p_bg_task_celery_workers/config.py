@@ -33,21 +33,12 @@ class Settings(BaseSettings):
 
     g2p_bridge_disbursement_url: str = "http://g2p_bridge_disbursement_url"
     g2p_bridge_envelope_creation_url: str = "http://g2p_bridge_envelope_creation_url"
-    disbursement_batch_size: int = 2000
+
+    batch_size: int = 2000
+    worker_max_attempts: int = 5
 
     # JWT parameters
     issuer: str = "issuer"
     audience: str = "audience"
     private_key: str = "private_key"
     sender_id: str = "sender_id"
-
-    # Authentication parameters
-    # auth_url: str = "https://idgenerator.loadtest.openg2p.org/v1/idgenerator/token"
-    # auth_client_id: str = "idgenerator"
-    # auth_client_secret: str = "idgenerator"
-    # auth_grant_type: str = "client_credentials"
-
-    # worker_type_max_attempts: dict[str, int] = {
-    #     "max_id_generation_request_attempts": 4,
-    #     "max_id_generation_update_attempts": 4,
-    # }
