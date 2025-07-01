@@ -37,7 +37,7 @@ def disbursement_envelope_creation_beat_producer():
                         == ListStageEnum.DISBURSEMENT.value,
                         G2PBeneficiaryList.entitlement_process_status
                         == StatusEnum.COMPLETE.value,
-                        G2PBeneficiaryList.disbursement_envelope_status
+                        G2PBeneficiaryList.envelope_creation_status
                         == StatusEnum.PENDING.value,
                     )
                 )
@@ -48,7 +48,7 @@ def disbursement_envelope_creation_beat_producer():
         )
 
         for beneficiary_list in beneficiary_lists:
-            beneficiary_list.disbursement_envelope_status = StatusEnum.PROCESSING.value
+            beneficiary_list.envelope_creation_status = StatusEnum.PROCESSING.value
             worker_type = WorkerTypes.DISBURSEMENT_ENVELOPE_CREATION_WORKER
 
             pbms_session.commit()

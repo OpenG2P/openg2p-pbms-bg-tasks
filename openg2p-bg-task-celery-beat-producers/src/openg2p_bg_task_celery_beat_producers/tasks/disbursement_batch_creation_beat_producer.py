@@ -35,7 +35,7 @@ def disbursement_batch_creation_beat_producer():
                         == ListWorkflowStatusEnum.APPROVED_FOR_DISBURSEMENT.value,
                         G2PBeneficiaryList.list_stage
                         == ListStageEnum.DISBURSEMENT.value,
-                        G2PBeneficiaryList.disbursement_envelope_status
+                        G2PBeneficiaryList.envelope_creation_status
                         == StatusEnum.COMPLETE.value,
                         G2PBeneficiaryList.disbursement_batch_creation_status
                         == StatusEnum.PENDING.value,
@@ -52,14 +52,13 @@ def disbursement_batch_creation_beat_producer():
                 StatusEnum.PROCESSING.value
             )
             worker_type = WorkerTypes.DISBURSEMENT_BATCH_CREATION_WORKER
-
-            pbms_session.commit()
-
             celery_app.send_task(
                 worker_type,
                 args=(beneficiary_list.id,),
                 queue=_config.bg_task_worker_queue,
             )
+
+            pbms_session.commit()
             _logger.info(
                 f"Sent task to {worker_type} for Beneficiary List ID: {beneficiary_list.id}"
             )

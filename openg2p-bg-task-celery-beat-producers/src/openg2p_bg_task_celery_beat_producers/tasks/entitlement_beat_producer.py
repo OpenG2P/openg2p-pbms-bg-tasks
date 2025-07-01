@@ -30,7 +30,7 @@ def entitlement_beat_producer():
                 select(BeneficiaryListDetails)
                 .filter(
                     # BeneficiaryListDetails.beneficiary_list_id == beneficiary_list.beneficiary_list_id,
-                    BeneficiaryListDetails.entitlement_status
+                    BeneficiaryListDetails.entitlement_process_status
                     == StatusEnum.PENDING.value
                 )
                 .limit(_config.batch_size)
@@ -47,7 +47,9 @@ def entitlement_beat_producer():
                 f"Queueing entitlement for Benficiary List ID: {beneficiary_list_detail.id}"
             )
 
-            beneficiary_list_detail.entitlement_status = StatusEnum.PROCESSING.value
+            beneficiary_list_detail.entitlement_process_status = (
+                StatusEnum.PROCESSING.value
+            )
             bg_task_session.add(beneficiary_list_detail)
 
             _logger.info(

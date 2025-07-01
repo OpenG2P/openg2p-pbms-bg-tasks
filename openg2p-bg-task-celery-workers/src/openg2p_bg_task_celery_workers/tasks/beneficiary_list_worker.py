@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from typing import List
 
 from openg2p_bg_task_models.models import BeneficiaryListDetails, BeneficiaryListSummary
 from openg2p_bg_task_models.schemas import RegistrantDetails
@@ -66,74 +67,13 @@ def beneficiary_list_worker(id: int):
             constructed_query = None
 
             if beneficiary_list.list_stage == ListStageEnum.ENROLLMENT.value:
-                sql_queries = (
-                    pbms_session.execute(
-                        select(G2PEligibilityRuleDefinition.sql_query).where(
-                            G2PEligibilityRuleDefinition.program_id
-                            == beneficiary_list.program_id
-                        )
-                    )
-                    .scalars()
-                    .all()
+                constructed_query = construct_enrollment_sql_query(
+                    pbms_session, beneficiary_list
                 )
-
-                constructed_query = construct_eligibility_query(sql_queries)
 
             elif beneficiary_list.list_stage == ListStageEnum.DISBURSEMENT.value:
-                # Get the beneficiary_list_id of the latest APPROVED FINAL ENROLMENT in the same program
-                latest_approved_final_enrollment_beneficiary_list_id = (
-                    pbms_session.query(G2PBeneficiaryList.beneficiary_list_id)
-                    .filter(
-                        G2PBeneficiaryList.program_id == beneficiary_list.program_id,
-                        G2PBeneficiaryList.list_stage == ListStageEnum.ENROLLMENT.value,
-                        G2PBeneficiaryList.list_workflow_status
-                        == ListWorkflowStatusEnum.APPROVED_FINAL_ENROLMENT.value,
-                    )
-                    .order_by(G2PBeneficiaryList.creation_date.desc())
-                    .scalar()
-                )
-
-                # Get the registrant_details field from beneficiary_list_details for the latest approved final enrollment
-                approved_registrant_details = None
-                if latest_approved_final_enrollment_beneficiary_list_id:
-                    latest_beneficiary_list_details = (
-                        bg_task_session.execute(
-                            select(BeneficiaryListDetails.registrant_details).where(
-                                BeneficiaryListDetails.beneficiary_list_id
-                                == latest_approved_final_enrollment_beneficiary_list_id
-                            )
-                        )
-                        .scalars()
-                        .all()
-                    )
-                    if latest_beneficiary_list_details:
-                        approved_registrant_details = latest_beneficiary_list_details
-
-                # Get approved registrant details for the latest approved final enrollment
-                registrant_ids = []
-                for approved_registrant_detail in approved_registrant_details:
-                    if approved_registrant_detail:
-                        if isinstance(approved_registrant_detail, str):
-                            details_list = json.loads(approved_registrant_detail)
-                        else:
-                            details_list = approved_registrant_detail
-                        registrant_ids = [
-                            registrant["registrant_id"] for registrant in details_list
-                        ]
-
-                # Fetch priority rule SQL queries for the current disbursement cycle and construct the priority query using the list of registrant IDs
-                sql_queries = (
-                    pbms_session.execute(
-                        select(G2PPriorityRuleDefinition.sql_query).where(
-                            G2PPriorityRuleDefinition.disbursement_cycle_id
-                            == beneficiary_list.disbursement_cycle_id
-                        )
-                    )
-                    .scalars()
-                    .all()
-                )
-                constructed_query = construct_priority_query(
-                    sql_queries, registrant_ids
+                constructed_query = construct_disbursement_sql_query(
+                    pbms_session, bg_task_session, beneficiary_list
                 )
 
             else:
@@ -146,21 +86,19 @@ def beneficiary_list_worker(id: int):
 
             # Execute the constructed SQL query to fetch registrant details and build BeneficiaryListDetails objects
             total_number_of_registrants = 0
-            beneficiary_list_details = []
-            cursor = sr_session.execute(constructed_query)
+            beneficiary_list_details: List[BeneficiaryListDetails] = []
+            registry_cursor = sr_session.execute(constructed_query)
             while True:
                 number_of_registrants_for_batch = 0
-                beneficiary_list_batch = cursor.fetchmany(
-                    _config.disbursement_batch_size
-                )
-                registrant_details = []
-                if not beneficiary_list_batch:
+                registry_batch = registry_cursor.fetchmany(_config.batch_size)
+                registrant_details: List[RegistrantDetails] = []
+                if not registry_batch:
                     break
-                for row in beneficiary_list_batch:
+                for registry_row in registry_batch:
                     number_of_registrants_for_batch += 1
                     registrant_details.append(
                         RegistrantDetails(
-                            registrant_id=row[0],
+                            registrant_id=registry_row[0],
                             entitlement={},
                         ).model_dump(mode="json")
                     )
@@ -170,7 +108,7 @@ def beneficiary_list_worker(id: int):
                     BeneficiaryListDetails(
                         beneficiary_list_id=beneficiary_list.beneficiary_list_id,
                         registrant_details=json.dumps(registrant_details),
-                        entitlement_status=StatusEnum.PENDING.value
+                        entitlement_process_status=StatusEnum.PENDING.value
                         if beneficiary_list.list_stage
                         == ListStageEnum.DISBURSEMENT.value
                         else StatusEnum.NOT_APPLICABLE.value,
@@ -180,6 +118,7 @@ def beneficiary_list_worker(id: int):
             _logger.debug(
                 f"Count of registrant IDs for beneficiary list id {id} are: {total_number_of_registrants}"
             )
+            beneficiary_list.number_of_registrants = total_number_of_registrants
             _logger.info(f"Adding eligibility details for beneficiary list id: {id}")
             bg_task_session.add_all(beneficiary_list_details)
 
@@ -209,7 +148,7 @@ def beneficiary_list_worker(id: int):
                 )
 
                 # Compute summary and add to session
-                summary_computation_interface.compute_and_persist_summary(
+                summary_computation_interface.compute_eligibility_statistics(
                     beneficiary_list_details, base_summary, sr_session, bg_task_session
                 )
 
@@ -243,12 +182,92 @@ def beneficiary_list_worker(id: int):
         except Exception as e:
             error_message = f"Error during processing eligibility request for beneficiary list id {id}: {str(e)}"
             _logger.error(error_message)
+            # Rollback all sessions
+            pbms_session.rollback()
+            bg_task_session.rollback()
 
             if beneficiary_list:
-                beneficiary_list.processed_date = datetime.now(timezone.utc)
-                beneficiary_list.eligibility_process_status = StatusEnum.PENDING.value
+                beneficiary_list.eligibility_number_of_attempts += 1
+                beneficiary_list.eligibility_processed_date = datetime.now(timezone.utc)
+                beneficiary_list.eligibility_process_status = (
+                    StatusEnum.PENDING.value
+                    if beneficiary_list.eligibility_number_of_attempts
+                    < _config.worker_max_attempts
+                    else StatusEnum.FAILED.value
+                )
+                beneficiary_list.eligibility_latest_error_code = str(e)
                 pbms_session.commit()
 
         _logger.info(
             f"Completed processing eligibility request for beneficiary list id: {id}"
         )
+
+
+def construct_enrollment_sql_query(pbms_session, beneficiary_list):
+    sql_queries = (
+        pbms_session.execute(
+            select(G2PEligibilityRuleDefinition.sql_query).where(
+                G2PEligibilityRuleDefinition.program_id == beneficiary_list.program_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    return construct_eligibility_query(sql_queries)
+
+
+def construct_disbursement_sql_query(pbms_session, bg_task_session, beneficiary_list):
+    # Get the beneficiary_list_id of the latest APPROVED FINAL ENROLMENT in the same program
+    latest_approved_final_enrollment_beneficiary_list_id = (
+        pbms_session.query(G2PBeneficiaryList.beneficiary_list_id)
+        .filter(
+            G2PBeneficiaryList.program_id == beneficiary_list.program_id,
+            G2PBeneficiaryList.list_stage == ListStageEnum.ENROLLMENT.value,
+            G2PBeneficiaryList.list_workflow_status
+            == ListWorkflowStatusEnum.APPROVED_FINAL_ENROLMENT.value,
+        )
+        .order_by(G2PBeneficiaryList.creation_date.desc())
+        .scalar()
+    )
+
+    # Get the registrant_details field from beneficiary_list_details for the latest approved final enrollment
+    registrant_details_list = None
+    if latest_approved_final_enrollment_beneficiary_list_id:
+        registrant_details_list = (
+            bg_task_session.execute(
+                select(BeneficiaryListDetails.registrant_details).where(
+                    BeneficiaryListDetails.beneficiary_list_id
+                    == latest_approved_final_enrollment_beneficiary_list_id
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    # Get approved registrant details for the latest approved final enrollment
+    registrant_ids = []
+    for registrant_details in registrant_details_list:
+        if registrant_details:
+            if isinstance(registrant_details, str):
+                registrant_details = json.loads(registrant_details)
+            registrant_ids = [
+                registrant["registrant_id"] for registrant in registrant_details
+            ]
+
+    # Fetch priority rule SQL queries for the current disbursement cycle and construct the priority query using the list of registrant IDs
+    sql_queries = (
+        pbms_session.execute(
+            select(G2PPriorityRuleDefinition.sql_query).where(
+                G2PPriorityRuleDefinition.disbursement_cycle_id
+                == beneficiary_list.disbursement_cycle_id
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return (
+        construct_priority_query(sql_queries, registrant_ids)
+        if sql_queries
+        else construct_enrollment_sql_query(pbms_session, beneficiary_list)
+    )

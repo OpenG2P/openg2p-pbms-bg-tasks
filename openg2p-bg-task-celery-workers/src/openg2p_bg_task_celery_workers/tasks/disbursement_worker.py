@@ -24,7 +24,7 @@ def construct_narrative(disbursement_cycle_mnemonic: str, program_mnemonic: str)
 
 
 @celery_app.task(name="disbursement_worker")
-def disbursement_worker(id: int):
+def disbursement_worker(id: str):
     _logger.info("Starting disbursement batch worker")
     bg_task_session_maker = sessionmaker(
         bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
@@ -130,6 +130,9 @@ def disbursement_worker(id: int):
 
         except Exception as e:
             _logger.error(f"Error in disbursement batch worker: {e}")
+
+            # Rollback all sessions
+            bg_task_session.rollback()
 
             if disbursement_batch:
                 disbursement_batch.disbursement_status = StatusEnum.PENDING.value

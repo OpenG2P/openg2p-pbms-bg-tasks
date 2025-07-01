@@ -55,7 +55,7 @@ def disbursement_beat_producer():
                 queue=_config.bg_task_worker_queue,
             )
             _logger.info(
-                f"Sent task to disbursement_status_worker for Disbursement Batch ID: {disbursement_batch.id}"
+                f"Sent task to {worker_type} for Disbursement Batch ID: {disbursement_batch.id}"
             )
 
     _logger.info("Completed processing pending Disbursement Batch requests")
