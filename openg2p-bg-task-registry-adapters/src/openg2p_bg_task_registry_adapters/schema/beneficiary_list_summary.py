@@ -4,17 +4,17 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 
-class GeneralSummary(BaseModel):
-    id: int
+class BeneficiaryListSummary(BaseModel):
+    id: str
     program_id: int
     program_mnemonic: str
     target_registry: str
     beneficiary_list_id: str
     number_of_registrants: Any
     date_created: Optional[datetime]
-    total_entitlement_amount: Optional[dict] = None
+    total_disbursement_quantity: Optional[dict] = None
     average_entitlement_per_registrant: Optional[dict] = None
 
 
-class SummaryPayload(BaseModel):
-    general_summary: GeneralSummary
+class BeneficiaryListSummaryPayload(BaseModel):
+    beneficiary_list_summary: BeneficiaryListSummary

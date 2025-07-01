@@ -18,12 +18,17 @@ from sqlalchemy.orm import Session
 
 from ..cache import beneficiary_count_key_builder
 from ..interface import RegistryInterface
-from ..models import BeneficiaryListSummaryStudent, G2PStudentRegistry
+from ..models import (
+    BeneficiaryListSummaryStudent as BeneficiaryListSummaryStudentModel,
+)
+from ..models import (
+    G2PStudentRegistry,
+)
 from ..schema import (
+    BeneficiaryListSummary,
+    BeneficiaryListSummaryStudent,
+    BeneficiaryListSummaryStudentPayload,
     G2PStudentRegistryPayload,
-    GeneralSummary,
-    RegistrySummaryStudentPayload,
-    SummaryStudentPayload,
 )
 
 _logger = logging.getLogger("openg2p_bg_task_registry_adapters")
@@ -37,11 +42,12 @@ class RegistryStudent(RegistryInterface):
     # ===================
     async def get_summary(
         self, beneficiary_list_id: int, bg_task_session: AsyncSession
-    ) -> SummaryStudentPayload:
+    ) -> BeneficiaryListSummaryStudentPayload:
         _logger.info(f"Fetching summary for beneficiary_list_id: {beneficiary_list_id}")
         eligibility_summary_student = await bg_task_session.execute(
-            select(BeneficiaryListSummaryStudent).where(
-                BeneficiaryListSummaryStudent.beneficiary_list_id == beneficiary_list_id
+            select(BeneficiaryListSummaryStudentModel).where(
+                BeneficiaryListSummaryStudentModel.beneficiary_list_id
+                == beneficiary_list_id
             )
         )
         eligibility_summary_student = eligibility_summary_student.scalars().first()
@@ -51,8 +57,8 @@ class RegistryStudent(RegistryInterface):
                 f"No summary found for beneficiary_list_id: {beneficiary_list_id}"
             )
 
-        summary = SummaryStudentPayload(
-            general_summary=GeneralSummary(
+        summary = BeneficiaryListSummaryStudentPayload(
+            beneficiary_list_summary=BeneficiaryListSummary(
                 id=eligibility_summary_student.id,
                 program_id=eligibility_summary_student.program_id,
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
@@ -62,8 +68,8 @@ class RegistryStudent(RegistryInterface):
                     eligibility_summary_student.number_of_registrants, ","
                 ),
                 date_created=eligibility_summary_student.date_created,
-                total_entitlement_amount=format(
-                    eligibility_summary_student.total_entitlement_amount, ","
+                total_disbursement_quantity=format(
+                    eligibility_summary_student.total_disbursement_quantity, ","
                 )
                 + " "
                 + eligibility_summary_student.entitlement_units,
@@ -73,22 +79,30 @@ class RegistryStudent(RegistryInterface):
                 + " "
                 + eligibility_summary_student.entitlement_units,
             ),
-            registry_summary=RegistrySummaryStudentPayload(
-                age_mean=f"{eligibility_summary_student.age_mean} {eligibility_summary_student.age_units}",
-                age_quartile_25=f"{eligibility_summary_student.age_quartile_25} {eligibility_summary_student.age_units}",
-                age_quartile_50=f"{eligibility_summary_student.age_quartile_50} {eligibility_summary_student.age_units}",
-                age_quartile_75=f"{eligibility_summary_student.age_quartile_75} {eligibility_summary_student.age_units}",
-                average_entitlement_female=f"{eligibility_summary_student.average_entitlement_female} {eligibility_summary_student.entitlement_units}",
-                average_entitlement_male=f"{eligibility_summary_student.average_entitlement_male} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_q1=f"{eligibility_summary_student.entitlement_amount_q1} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_q2=f"{eligibility_summary_student.entitlement_amount_q2} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_q3=f"{eligibility_summary_student.entitlement_amount_q3} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_male_q1=f"{eligibility_summary_student.entitlement_amount_male_q1} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_male_q2=f"{eligibility_summary_student.entitlement_amount_male_q2} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_male_q3=f"{eligibility_summary_student.entitlement_amount_male_q3} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_female_q1=f"{eligibility_summary_student.entitlement_amount_female_q1} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_female_q2=f"{eligibility_summary_student.entitlement_amount_female_q2} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_female_q3=f"{eligibility_summary_student.entitlement_amount_female_q3} {eligibility_summary_student.entitlement_units}",
+            registry_summary=BeneficiaryListSummaryStudent(
+                age_mean=f"{eligibility_summary_student.age_mean} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_mean is not None
+                else None,
+                age_quartile_25=f"{eligibility_summary_student.age_quartile_25} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_quartile_25 is not None
+                else None,
+                age_quartile_50=f"{eligibility_summary_student.age_quartile_50} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_quartile_50 is not None
+                else None,
+                age_quartile_75=f"{eligibility_summary_student.age_quartile_75} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_quartile_75 is not None
+                else None,
+                average_entitlement_female=eligibility_summary_student.average_entitlement_female,
+                average_entitlement_male=eligibility_summary_student.average_entitlement_male,
+                entitlement_amount_q1=eligibility_summary_student.entitlement_amount_q1,
+                entitlement_amount_q2=eligibility_summary_student.entitlement_amount_q2,
+                entitlement_amount_q3=eligibility_summary_student.entitlement_amount_q3,
+                entitlement_amount_male_q1=eligibility_summary_student.entitlement_amount_male_q1,
+                entitlement_amount_male_q2=eligibility_summary_student.entitlement_amount_male_q2,
+                entitlement_amount_male_q3=eligibility_summary_student.entitlement_amount_male_q3,
+                entitlement_amount_female_q1=eligibility_summary_student.entitlement_amount_female_q1,
+                entitlement_amount_female_q2=eligibility_summary_student.entitlement_amount_female_q2,
+                entitlement_amount_female_q3=eligibility_summary_student.entitlement_amount_female_q3,
             ),
         )
 
@@ -96,9 +110,9 @@ class RegistryStudent(RegistryInterface):
 
     def get_summary_sync(
         self, beneficiary_list_id: str, bg_task_session: Session
-    ) -> SummaryStudentPayload:
+    ) -> BeneficiaryListSummaryStudentPayload:
         eligibility_summary_student = (
-            bg_task_session.query(BeneficiaryListSummaryStudent)
+            bg_task_session.query(BeneficiaryListSummaryStudentModel)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
@@ -108,8 +122,8 @@ class RegistryStudent(RegistryInterface):
                 f"No summary found for beneficiary_list_id: {beneficiary_list_id}"
             )
 
-        summary = SummaryStudentPayload(
-            general_summary=GeneralSummary(
+        summary = BeneficiaryListSummaryStudentPayload(
+            beneficiary_list_summary=BeneficiaryListSummary(
                 id=eligibility_summary_student.id,
                 program_id=eligibility_summary_student.program_id,
                 program_mnemonic=eligibility_summary_student.program_mnemonic,
@@ -117,25 +131,33 @@ class RegistryStudent(RegistryInterface):
                 beneficiary_list_id=eligibility_summary_student.beneficiary_list_id,
                 number_of_registrants=eligibility_summary_student.number_of_registrants,
                 date_created=eligibility_summary_student.date_created,
-                total_entitlement_amount=eligibility_summary_student.total_entitlement_amount,
+                total_disbursement_quantity=eligibility_summary_student.total_disbursement_quantity,
                 average_entitlement_per_registrant=eligibility_summary_student.average_entitlement_per_person,
             ),
-            registry_summary=RegistrySummaryStudentPayload(
-                age_mean=f"{eligibility_summary_student.age_mean} {eligibility_summary_student.age_units}",
-                age_quartile_25=f"{eligibility_summary_student.age_quartile_25} {eligibility_summary_student.age_units}",
-                age_quartile_50=f"{eligibility_summary_student.age_quartile_50} {eligibility_summary_student.age_units}",
-                age_quartile_75=f"{eligibility_summary_student.age_quartile_75} {eligibility_summary_student.age_units}",
-                average_entitlement_female=f"{eligibility_summary_student.average_entitlement_female} {eligibility_summary_student.entitlement_units}",
-                average_entitlement_male=f"{eligibility_summary_student.average_entitlement_male} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_q1=f"{eligibility_summary_student.entitlement_amount_q1} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_q2=f"{eligibility_summary_student.entitlement_amount_q2} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_q3=f"{eligibility_summary_student.entitlement_amount_q3} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_male_q1=f"{eligibility_summary_student.entitlement_amount_male_q1} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_male_q2=f"{eligibility_summary_student.entitlement_amount_male_q2} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_male_q3=f"{eligibility_summary_student.entitlement_amount_male_q3} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_female_q1=f"{eligibility_summary_student.entitlement_amount_female_q1} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_female_q2=f"{eligibility_summary_student.entitlement_amount_female_q2} {eligibility_summary_student.entitlement_units}",
-                entitlement_amount_female_q3=f"{eligibility_summary_student.entitlement_amount_female_q3} {eligibility_summary_student.entitlement_units}",
+            registry_summary=BeneficiaryListSummaryStudent(
+                age_mean=f"{eligibility_summary_student.age_mean} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_mean is not None
+                else None,
+                age_quartile_25=f"{eligibility_summary_student.age_quartile_25} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_quartile_25 is not None
+                else None,
+                age_quartile_50=f"{eligibility_summary_student.age_quartile_50} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_quartile_50 is not None
+                else None,
+                age_quartile_75=f"{eligibility_summary_student.age_quartile_75} {eligibility_summary_student.age_units}"
+                if eligibility_summary_student.age_quartile_75 is not None
+                else None,
+                average_entitlement_female=eligibility_summary_student.average_entitlement_female,
+                average_entitlement_male=eligibility_summary_student.average_entitlement_male,
+                entitlement_amount_q1=eligibility_summary_student.entitlement_amount_q1,
+                entitlement_amount_q2=eligibility_summary_student.entitlement_amount_q2,
+                entitlement_amount_q3=eligibility_summary_student.entitlement_amount_q3,
+                entitlement_amount_male_q1=eligibility_summary_student.entitlement_amount_male_q1,
+                entitlement_amount_male_q2=eligibility_summary_student.entitlement_amount_male_q2,
+                entitlement_amount_male_q3=eligibility_summary_student.entitlement_amount_male_q3,
+                entitlement_amount_female_q1=eligibility_summary_student.entitlement_amount_female_q1,
+                entitlement_amount_female_q2=eligibility_summary_student.entitlement_amount_female_q2,
+                entitlement_amount_female_q3=eligibility_summary_student.entitlement_amount_female_q3,
             ),
         )
 
@@ -233,7 +255,7 @@ class RegistryStudent(RegistryInterface):
     # =================================
     # Eligibility Celery Worker Methods
     # =================================
-    def compute_and_persist_summary(
+    def compute_eligibility_statistics(
         self,
         beneficiary_list_details: List[dict],
         base_summary,
@@ -254,7 +276,7 @@ class RegistryStudent(RegistryInterface):
             for student in registrants:
                 students_age.append(self.calculate_age(student.date_of_birth))
 
-        student_summary = BeneficiaryListSummaryStudent(
+        student_summary = BeneficiaryListSummaryStudentModel(
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
             target_registry=base_summary.target_registry,
@@ -309,7 +331,7 @@ class RegistryStudent(RegistryInterface):
     ) -> None:
         try:
             summary_student = (
-                bg_task_session.query(BeneficiaryListSummaryStudent)
+                bg_task_session.query(BeneficiaryListSummaryStudentModel)
                 .filter_by(beneficiary_list_id=beneficiary_list_id)
                 .with_for_update()
                 .one()
@@ -346,11 +368,11 @@ class RegistryStudent(RegistryInterface):
             return 1
         return int(result[0])
 
-    def compute_entitlements_and_modify_summary(
+    def compute_entitlement_statistics(
         self, beneficiary_list_id: str, bg_task_session: Session, sr_session: Session
     ):
         summary_student = (
-            bg_task_session.query(BeneficiaryListSummaryStudent)
+            bg_task_session.query(BeneficiaryListSummaryStudentModel)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
@@ -422,12 +444,13 @@ class RegistryStudent(RegistryInterface):
         entitlement_female_stats = self.compute_stats_dict(entitlements_female)
 
         bg_task_session.execute(
-            update(BeneficiaryListSummaryStudent)
+            update(BeneficiaryListSummaryStudentModel)
             .where(
-                BeneficiaryListSummaryStudent.beneficiary_list_id == beneficiary_list_id
+                BeneficiaryListSummaryStudentModel.beneficiary_list_id
+                == beneficiary_list_id
             )
             .values(
-                total_entitlement_amount=dict(entitlement_stats["total"]),
+                total_disbursement_quantity=dict(entitlement_stats["total"]),
                 average_entitlement_per_person=dict(entitlement_stats["average"]),
                 entitlement_amount_q1=dict(entitlement_stats["q1"]),
                 entitlement_amount_q2=dict(entitlement_stats["q2"]),

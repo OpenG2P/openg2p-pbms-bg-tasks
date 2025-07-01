@@ -16,12 +16,17 @@ from sqlalchemy.orm import Session
 
 from ..cache import beneficiary_count_key_builder
 from ..interface import RegistryInterface
-from ..models import BeneficiaryListSummaryFarmer, G2PFarmerRegistry
+from ..models import (
+    BeneficiaryListSummaryFarmer as BeneficiaryListSummaryFarmerModel,
+)
+from ..models import (
+    G2PFarmerRegistry,
+)
 from ..schema import (
+    BeneficiaryListSummary,
+    BeneficiaryListSummaryFarmer,
+    BeneficiaryListSummaryFarmerPayload,
     G2PFarmerRegistryPayload,
-    GeneralSummary,
-    RegistrySummaryFarmerPayload,
-    SummaryFarmerPayload,
 )
 
 
@@ -36,10 +41,11 @@ class RegistryFarmer(RegistryInterface):
         beneficiary_list_id: str,
         bg_task_session: AsyncSession,
         formated: bool = False,
-    ) -> SummaryFarmerPayload:
+    ) -> BeneficiaryListSummaryFarmerPayload:
         beneficiary_list_summary_farmer = await bg_task_session.execute(
-            select(BeneficiaryListSummaryFarmer).where(
-                BeneficiaryListSummaryFarmer.beneficiary_list_id == beneficiary_list_id
+            select(BeneficiaryListSummaryFarmerModel).where(
+                BeneficiaryListSummaryFarmerModel.beneficiary_list_id
+                == beneficiary_list_id
             )
         )
         beneficiary_list_summary_farmer = (
@@ -47,8 +53,8 @@ class RegistryFarmer(RegistryInterface):
         )
 
         number_of_registrants = beneficiary_list_summary_farmer.number_of_registrants
-        total_entitlement_amount = (
-            beneficiary_list_summary_farmer.total_entitlement_amount
+        total_disbursement_quantity = (
+            beneficiary_list_summary_farmer.total_disbursement_quantity
         )
         average_entitlement_per_registrant = (
             beneficiary_list_summary_farmer.average_entitlement_per_person
@@ -58,8 +64,8 @@ class RegistryFarmer(RegistryInterface):
         #     number_of_registrants = format(
         #         beneficiary_list_summary_farmer.number_of_registrants, ","
         #     )
-        #     total_entitlement_amount = (
-        #         format(beneficiary_list_summary_farmer.total_entitlement_amount, ",")
+        #     total_disbursement_quantity = (
+        #         format(beneficiary_list_summary_farmer.total_disbursement_quantity, ",")
         #         + " "
         #         + beneficiary_list_summary_farmer.entitlement_units
         #     )
@@ -69,8 +75,8 @@ class RegistryFarmer(RegistryInterface):
         #         + beneficiary_list_summary_farmer.entitlement_units
         #     )
 
-        summary_farmer_payload = SummaryFarmerPayload(
-            general_summary=GeneralSummary(
+        summary_farmer_payload = BeneficiaryListSummaryFarmerPayload(
+            beneficiary_list_summary=BeneficiaryListSummary(
                 id=beneficiary_list_summary_farmer.id,
                 program_id=beneficiary_list_summary_farmer.program_id,
                 program_mnemonic=beneficiary_list_summary_farmer.program_mnemonic,
@@ -78,18 +84,34 @@ class RegistryFarmer(RegistryInterface):
                 beneficiary_list_id=beneficiary_list_summary_farmer.beneficiary_list_id,
                 number_of_registrants=number_of_registrants,
                 date_created=beneficiary_list_summary_farmer.date_created,
-                total_entitlement_amount=total_entitlement_amount,
+                total_disbursement_quantity=total_disbursement_quantity,
                 average_entitlement_per_registrant=average_entitlement_per_registrant,
             ),
-            registry_summary=RegistrySummaryFarmerPayload(
-                land_holding_mean=f"{beneficiary_list_summary_farmer.land_holding_mean} {beneficiary_list_summary_farmer.land_holding_units}",
-                land_holding_quartile_25=f"{beneficiary_list_summary_farmer.land_holding_quartile_25} {beneficiary_list_summary_farmer.land_holding_units}",
-                land_holding_quartile_50=f"{beneficiary_list_summary_farmer.land_holding_quartile_50} {beneficiary_list_summary_farmer.land_holding_units}",
-                land_holding_quartile_75=f"{beneficiary_list_summary_farmer.land_holding_quartile_75} {beneficiary_list_summary_farmer.land_holding_units}",
-                annual_income_mean=f"{beneficiary_list_summary_farmer.annual_income_mean} {beneficiary_list_summary_farmer.annual_income_units}",
-                annual_income_quartile_25=f"{beneficiary_list_summary_farmer.annual_income_quartile_25} {beneficiary_list_summary_farmer.annual_income_units}",
-                annual_income_quartile_50=f"{beneficiary_list_summary_farmer.annual_income_quartile_50} {beneficiary_list_summary_farmer.annual_income_units}",
-                annual_income_quartile_75=f"{beneficiary_list_summary_farmer.annual_income_quartile_75} {beneficiary_list_summary_farmer.annual_income_units}",
+            registry_summary=BeneficiaryListSummaryFarmer(
+                land_holding_mean=f"{beneficiary_list_summary_farmer.land_holding_mean} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_mean is not None
+                else None,
+                land_holding_quartile_25=f"{beneficiary_list_summary_farmer.land_holding_quartile_25} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_quartile_25 is not None
+                else None,
+                land_holding_quartile_50=f"{beneficiary_list_summary_farmer.land_holding_quartile_50} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_quartile_50 is not None
+                else None,
+                land_holding_quartile_75=f"{beneficiary_list_summary_farmer.land_holding_quartile_75} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_quartile_75 is not None
+                else None,
+                annual_income_mean=f"{beneficiary_list_summary_farmer.annual_income_mean} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_mean is not None
+                else None,
+                annual_income_quartile_25=f"{beneficiary_list_summary_farmer.annual_income_quartile_25} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_quartile_25 is not None
+                else None,
+                annual_income_quartile_50=f"{beneficiary_list_summary_farmer.annual_income_quartile_50} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_quartile_50 is not None
+                else None,
+                annual_income_quartile_75=f"{beneficiary_list_summary_farmer.annual_income_quartile_75} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_quartile_75 is not None
+                else None,
                 average_entitlement_female=beneficiary_list_summary_farmer.average_entitlement_female,
                 average_entitlement_male=beneficiary_list_summary_farmer.average_entitlement_male,
                 entitlement_amount_75=beneficiary_list_summary_farmer.entitlement_amount_q3,
@@ -108,15 +130,15 @@ class RegistryFarmer(RegistryInterface):
 
     def get_summary_sync(
         self, beneficiary_list_id: str, bg_task_session: Session
-    ) -> SummaryFarmerPayload:
+    ) -> BeneficiaryListSummaryFarmerPayload:
         beneficiary_list_summary_farmer = (
-            bg_task_session.query(BeneficiaryListSummaryFarmer)
+            bg_task_session.query(BeneficiaryListSummaryFarmerModel)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .first()
         )
 
-        summary_farmer_payload = SummaryFarmerPayload(
-            general_summary=GeneralSummary(
+        summary_farmer_payload = BeneficiaryListSummaryFarmerPayload(
+            beneficiary_list_summary=BeneficiaryListSummary(
                 id=beneficiary_list_summary_farmer.id,
                 program_id=beneficiary_list_summary_farmer.program_id,
                 program_mnemonic=beneficiary_list_summary_farmer.program_mnemonic,
@@ -124,18 +146,34 @@ class RegistryFarmer(RegistryInterface):
                 beneficiary_list_id=beneficiary_list_summary_farmer.beneficiary_list_id,
                 number_of_registrants=beneficiary_list_summary_farmer.number_of_registrants,
                 date_created=beneficiary_list_summary_farmer.date_created,
-                total_entitlement_amount=beneficiary_list_summary_farmer.total_entitlement_amount,
+                total_disbursement_quantity=beneficiary_list_summary_farmer.total_disbursement_quantity,
                 average_entitlement_per_registrant=beneficiary_list_summary_farmer.average_entitlement_per_person,
             ),
-            registry_summary=RegistrySummaryFarmerPayload(
-                land_holding_mean=f"{beneficiary_list_summary_farmer.land_holding_mean} {beneficiary_list_summary_farmer.land_holding_units}",
-                land_holding_quartile_75=f"{beneficiary_list_summary_farmer.land_holding_quartile_75} {beneficiary_list_summary_farmer.land_holding_units}",
-                land_holding_quartile_50=f"{beneficiary_list_summary_farmer.land_holding_quartile_50} {beneficiary_list_summary_farmer.land_holding_units}",
-                land_holding_quartile_25=f"{beneficiary_list_summary_farmer.land_holding_quartile_25} {beneficiary_list_summary_farmer.land_holding_units}",
-                annual_income_mean=f"{beneficiary_list_summary_farmer.annual_income_mean} {beneficiary_list_summary_farmer.annual_income_units}",
-                annual_income_quartile_75=f"{beneficiary_list_summary_farmer.annual_income_quartile_75} {beneficiary_list_summary_farmer.annual_income_units}",
-                annual_income_quartile_50=f"{beneficiary_list_summary_farmer.annual_income_quartile_50} {beneficiary_list_summary_farmer.annual_income_units}",
-                annual_income_quartile_25=f"{beneficiary_list_summary_farmer.annual_income_quartile_25} {beneficiary_list_summary_farmer.annual_income_units}",
+            registry_summary=BeneficiaryListSummaryFarmer(
+                land_holding_mean=f"{beneficiary_list_summary_farmer.land_holding_mean} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_mean is not None
+                else None,
+                land_holding_quartile_75=f"{beneficiary_list_summary_farmer.land_holding_quartile_75} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_quartile_75 is not None
+                else None,
+                land_holding_quartile_50=f"{beneficiary_list_summary_farmer.land_holding_quartile_50} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_quartile_50 is not None
+                else None,
+                land_holding_quartile_25=f"{beneficiary_list_summary_farmer.land_holding_quartile_25} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_quartile_25 is not None
+                else None,
+                annual_income_mean=f"{beneficiary_list_summary_farmer.annual_income_mean} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_mean is not None
+                else None,
+                annual_income_quartile_75=f"{beneficiary_list_summary_farmer.annual_income_quartile_75} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_quartile_75 is not None
+                else None,
+                annual_income_quartile_50=f"{beneficiary_list_summary_farmer.annual_income_quartile_50} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_quartile_50 is not None
+                else None,
+                annual_income_quartile_25=f"{beneficiary_list_summary_farmer.annual_income_quartile_25} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_quartile_25 is not None
+                else None,
                 average_entitlement_female=beneficiary_list_summary_farmer.average_entitlement_female,
                 average_entitlement_male=beneficiary_list_summary_farmer.average_entitlement_male,
                 entitlement_amount_75=beneficiary_list_summary_farmer.entitlement_amount_q3,
@@ -196,9 +234,6 @@ class RegistryFarmer(RegistryInterface):
         total_beneficiary_count: int = await self._get_total_beneficiary_count(
             sr_session, beneficiary_list_id, registrant_ids, search_query
         )
-        # TODO: get list_status from PBMS
-
-        # TODO: unique_id -> registrant_id
         beneficiaries = []
         if farmer_search_results:
             beneficiaries = [
@@ -213,8 +248,6 @@ class RegistryFarmer(RegistryInterface):
                 )
                 for farmer in farmer_search_results
             ]
-        # if list_status == "approved_for_disbursement":
-        #     disbursements = self.get_bridge_disbursement_details()
 
         response_payload = BeneficiarySearchResponsePayload(
             total_beneficiary_count=total_beneficiary_count,
@@ -249,14 +282,14 @@ class RegistryFarmer(RegistryInterface):
     # =================================
     # Eligibility Celery Worker Methods
     # =================================
-    def compute_and_persist_summary(
+    def compute_eligibility_statistics(
         self,
         beneficiary_list_details: List[BeneficiaryListDetails],
         base_summary,
         sr_session: Session,
         bg_task_session: Session,
     ):
-        farmer_summary = BeneficiaryListSummaryFarmer(
+        farmer_summary = BeneficiaryListSummaryFarmerModel(
             program_id=base_summary.program_id,
             program_mnemonic=base_summary.program_mnemonic,
             target_registry=base_summary.target_registry,
@@ -324,24 +357,6 @@ class RegistryFarmer(RegistryInterface):
     # =================================
     # Entitlement Celery Worker Methods
     # =================================
-    def lock_and_update_summary(
-        self,
-        number_of_registrants: int,
-        beneficiary_list_id: str,
-        bg_task_session: Session,
-    ) -> None:
-        try:
-            summary_farmer = (
-                bg_task_session.query(BeneficiaryListSummaryFarmer)
-                .filter_by(beneficiary_list_id=beneficiary_list_id)
-                .with_for_update()
-                .one()
-            )
-            summary_farmer.number_of_entitlements_processed += number_of_registrants
-            bg_task_session.commit()
-        except Exception as _:
-            bg_task_session.rollback()
-
     def get_is_registant_entitled(
         self, registrant_id: str, sql_query: str, sr_session: Session
     ) -> bool:
@@ -370,28 +385,16 @@ class RegistryFarmer(RegistryInterface):
 
         return multiplier_value
 
-    def compute_entitlements_and_modify_summary(
+    def compute_entitlement_statistics(
         self, beneficiary_list_id: str, bg_task_session: Session, sr_session: Session
     ):
-        summary_farmer = (
-            bg_task_session.query(BeneficiaryListSummaryFarmer)
-            .filter_by(beneficiary_list_id=beneficiary_list_id)
-            .first()
-        )
-
-        if (
-            summary_farmer.number_of_entitlements_processed
-            != summary_farmer.number_of_registrants
-        ):
-            return
-
         beneficiary_list_details = (
             bg_task_session.query(BeneficiaryListDetails)
             .filter_by(beneficiary_list_id=beneficiary_list_id)
             .all()
         )
 
-        registrant_map: dict[str, G2PFarmerRegistry] = {}
+        registrant_map_from_registry: dict[str, G2PFarmerRegistry] = {}
 
         for beneficiary_list_detail in beneficiary_list_details:
             registrant_ids = []
@@ -399,12 +402,13 @@ class RegistryFarmer(RegistryInterface):
                 registrant_detail = RegistrantDetails(**registrant_detail)
                 registrant_ids.append(registrant_detail.registrant_id)
 
+            # Fething registrants in batches
             registrants_list: List[G2PFarmerRegistry] = self.get_registrants_by_ids(
                 registrant_ids, sr_session
             )
 
             for registrant in registrants_list:
-                registrant_map[str(registrant.unique_id)] = registrant
+                registrant_map_from_registry[str(registrant.unique_id)] = registrant
 
         # Collect entitlements per benefit_code_id
         entitlements: dict[int, list[float]] = {}
@@ -414,7 +418,9 @@ class RegistryFarmer(RegistryInterface):
         for beneficiary_list_detail in beneficiary_list_details:
             for registrant_detail in beneficiary_list_detail.registrant_details:
                 registrant_detail = RegistrantDetails(**registrant_detail)
-                registrant = registrant_map.get(str(registrant_detail.registrant_id))
+                registrant = registrant_map_from_registry.get(
+                    str(registrant_detail.registrant_id)
+                )
                 gender = registrant.gender if registrant else None
 
                 for benefit_code_id, value in registrant_detail.entitlement.items():
@@ -436,12 +442,13 @@ class RegistryFarmer(RegistryInterface):
         entitlement_female_stats = self.compute_stats_dict(entitlements_female)
 
         bg_task_session.execute(
-            update(BeneficiaryListSummaryFarmer)
+            update(BeneficiaryListSummaryFarmerModel)
             .where(
-                BeneficiaryListSummaryFarmer.beneficiary_list_id == beneficiary_list_id
+                BeneficiaryListSummaryFarmerModel.beneficiary_list_id
+                == beneficiary_list_id
             )
             .values(
-                total_entitlement_amount=dict(entitlement_stats["total"]),
+                total_disbursement_quantity=dict(entitlement_stats["total"]),
                 average_entitlement_per_person=dict(entitlement_stats["average"]),
                 entitlement_amount_q1=dict(entitlement_stats["q1"]),
                 entitlement_amount_q2=dict(entitlement_stats["q2"]),
