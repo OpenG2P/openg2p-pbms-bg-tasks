@@ -6,6 +6,7 @@ class StatusEnum(enum.Enum):
     PROCESSING = "processing"
     COMPLETE = "complete"
     NOT_APPLICABLE = "not_applicable"
+    FAILED = "failed"
 
 
 class ListWorkflowStatusEnum(enum.Enum):
