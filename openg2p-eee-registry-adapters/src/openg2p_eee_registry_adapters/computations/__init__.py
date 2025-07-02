@@ -1,2 +1,0 @@
-from .eee_registry_farmer import EEERegistryFarmer
-from .eee_registry_student import EEERegistryStudent

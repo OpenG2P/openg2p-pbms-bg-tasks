@@ -16,7 +16,6 @@ class G2PEntitlementRuleDefinition(BaseORMModel):
     )
     # measurement_unit = mapped_column(String, nullable=True)
     multiplier = mapped_column(String, nullable=True)
-    max_quantity = mapped_column(Integer, nullable=False, default=0)
     # allowed_multipliers = mapped_column(String, nullable=True)
     quantity = mapped_column(Float, nullable=False)
     pbms_domain = mapped_column(String, nullable=False)

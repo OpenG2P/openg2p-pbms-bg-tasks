@@ -14,7 +14,7 @@ class G2PDisbursementCycle(BaseORMModel):
     )
     cycle_mnemonic = mapped_column(String, nullable=False)
     bridge_envelope_id = mapped_column(String, nullable=True)
-    # target_registry_type = mapped_column(String, nullable=True)
+    # target_registry = mapped_column(String, nullable=True)
     envelope_creation_status = mapped_column(
         String, nullable=False, default=StatusEnum.PENDING.value
     )

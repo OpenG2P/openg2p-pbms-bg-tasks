@@ -1,0 +1,224 @@
+import logging
+from datetime import datetime, timezone
+from typing import List
+
+from openg2p_bg_task_models.models import DisbursementEnvelope
+from openg2p_bg_task_registry_adapters.factory import RegistryFactory
+from openg2p_bg_task_registry_adapters.interface import RegistryInterface
+from openg2p_bg_task_registry_adapters.schema import BeneficiaryListSummaryPayload
+from openg2p_g2p_bridge_models.schemas import (
+    DisbursementEnvelopePayload,
+)
+from openg2p_pbms_models.models import (
+    G2PBeneficiaryList,
+    G2PBenefitCodes,
+    G2PDisbursementCycle,
+    G2PProgramDefinition,
+    StatusEnum,
+)
+from sqlalchemy.orm import sessionmaker
+
+from ..app import celery_app, get_engine
+from ..config import Settings
+from ..helpers import create_jwt_token
+from ..helpers.g2p_bridge_helper import G2PBridgeDisbursementHelper
+
+_config = Settings.get_config()
+_logger = logging.getLogger(_config.logging_default_logger_name)
+_engine = get_engine()
+
+
+@celery_app.task(name="disbursement_envelope_creation_worker")
+def disbursement_envelope_creation_worker(id: int):
+    _logger.info(
+        f"Starting disbursement envelope creation request for beneficiary list id: {id}"
+    )
+    pbms_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_pbms"), expire_on_commit=False
+    )
+    bg_task_session_maker = sessionmaker(
+        bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
+    )
+
+    with pbms_session_maker() as pbms_session, bg_task_session_maker() as bg_task_session:
+        beneficiary_list = None
+        try:
+            beneficiary_list = (
+                pbms_session.query(G2PBeneficiaryList)
+                .filter(G2PBeneficiaryList.id == id)
+                .first()
+            )
+
+            program_definition: G2PProgramDefinition = (
+                pbms_session.query(G2PProgramDefinition)
+                .filter(G2PProgramDefinition.id == beneficiary_list.program_id)
+                .first()
+            )
+
+            disbursement_cycle: G2PDisbursementCycle = (
+                pbms_session.query(G2PDisbursementCycle)
+                .filter(
+                    G2PDisbursementCycle.id == beneficiary_list.disbursement_cycle_id
+                )
+                .first()
+            )
+
+            # Get the appropriate registry interface for the program's target registry
+            registry_interface: RegistryInterface = RegistryFactory.get_registry_class(
+                program_definition.target_registry,
+            )
+
+            _logger.info(
+                f"Fetching summary for beneficiary_list_id: {beneficiary_list.beneficiary_list_id}"
+            )
+
+            summary_payload: BeneficiaryListSummaryPayload = (
+                registry_interface.get_summary_sync(
+                    beneficiary_list.beneficiary_list_id, bg_task_session
+                )
+            )
+
+            if not summary_payload:
+                raise Exception(
+                    f"No summary found for beneficiary_list_id: {beneficiary_list.beneficiary_list_id}"
+                )
+
+            disbursement_envelope_request_message: List[
+                DisbursementEnvelopePayload
+            ] = construct_disbursement_envelope_request_message(
+                pbms_session, program_definition, disbursement_cycle, summary_payload
+            )
+
+            # Use the helper class for envelope creation
+            bridge_disbursement_helper = G2PBridgeDisbursementHelper(
+                _config, _logger, create_jwt_token
+            )
+            (
+                disbursement_envelope_response,
+                error,
+            ) = bridge_disbursement_helper.create_disbursement_envelope(
+                disbursement_envelope_request_message
+            )
+            _logger.debug(
+                f"Disbursement envelope response: {disbursement_envelope_response}"
+            )
+            if error:
+                raise Exception(f"Error occurred while creating envelope: {error}")
+
+            disbursement_envelopes: List[
+                DisbursementEnvelope
+            ] = construct_disbursement_envelopes(
+                beneficiary_list, disbursement_envelope_response
+            )
+
+            # Bulk insert all the disbursement envelopes
+            bg_task_session.add_all(disbursement_envelopes)
+
+            beneficiary_list.envelope_creation_status = StatusEnum.COMPLETE.value
+            beneficiary_list.envelope_creation_processed_date = datetime.now(
+                timezone.utc
+            )
+            beneficiary_list.disbursement_batch_creation_status = (
+                StatusEnum.PENDING.value
+            )
+
+            pbms_session.commit()
+            bg_task_session.commit()
+
+        except Exception as e:
+            _logger.error(
+                f"Exception occurred while processing disbursement envelope creation request: {e}"
+            )
+            pbms_session.rollback()
+            bg_task_session.rollback()
+
+            if beneficiary_list:
+                beneficiary_list.envelope_creation_number_of_attempts += 1
+                beneficiary_list.envelope_creation_status = (
+                    StatusEnum.PENDING.value
+                    if beneficiary_list.envelope_creation_number_of_attempts
+                    < _config.worker_max_attempts
+                    else StatusEnum.FAILED.value
+                )
+                beneficiary_list.envelope_creation_latest_error_code = str(e)
+                pbms_session.commit()
+
+
+def create_disbursement_envelope_payload(
+    benefit_code_id: int,
+    total_disbursement_quantity: float,
+    program_definition: G2PProgramDefinition,
+    disbursement_cycle: G2PDisbursementCycle,
+    summary_payload: BeneficiaryListSummaryPayload,
+    pbms_session,
+) -> DisbursementEnvelopePayload:
+    benefit_code: G2PBenefitCodes = (
+        pbms_session.query(G2PBenefitCodes)
+        .filter(
+            G2PBenefitCodes.id == benefit_code_id,
+        )
+        .first()
+    )
+    disbursement_envelope_payload = DisbursementEnvelopePayload(
+        benefit_program_mnemonic=program_definition.program_mnemonic,
+        cycle_code_mnemonic=disbursement_cycle.cycle_mnemonic,
+        benefit_code_id=str(benefit_code_id),
+        benefit_code_mnemonic=benefit_code.benefit_mnemonic,
+        benefit_type=benefit_code.benefit_type,
+        disbursement_cycle_id=str(disbursement_cycle.id),
+        number_of_beneficiaries=summary_payload.beneficiary_list_summary.number_of_registrants,
+        number_of_disbursements=summary_payload.beneficiary_list_summary.number_of_registrants,
+        total_disbursement_quantity=total_disbursement_quantity,
+        disbursement_schedule_date=disbursement_cycle.disbursement_schedule_date,
+        disbursement_frequency=program_definition.disbursement_frequency.value,
+        measurement_unit=benefit_code.measurement_unit,
+    )
+    return disbursement_envelope_payload
+
+
+def construct_disbursement_envelope_request_message(
+    pbms_session, program_definition, disbursement_cycle, summary_payload
+) -> List[DisbursementEnvelopePayload]:
+    disbursement_envelope_request_message: List[DisbursementEnvelopePayload] = []
+    for (
+        benefit_code_id,
+        total_disbursement_quantity,
+    ) in summary_payload.beneficiary_list_summary.total_disbursement_quantity.items():
+        disbursement_envelope_payload = create_disbursement_envelope_payload(
+            int(benefit_code_id),
+            total_disbursement_quantity,
+            program_definition,
+            disbursement_cycle,
+            summary_payload,
+            pbms_session,
+        )
+        disbursement_envelope_request_message.append(disbursement_envelope_payload)
+    return disbursement_envelope_request_message
+
+
+def construct_disbursement_envelopes(
+    beneficiary_list, disbursement_envelope_response
+) -> List[DisbursementEnvelope]:
+    disbursement_envelopes: List[DisbursementEnvelope] = []
+    for disbursement_envelope_reponse_message in disbursement_envelope_response.message:
+        disbursement_envelope = DisbursementEnvelope(
+            id=disbursement_envelope_reponse_message.disbursement_envelope_id,
+            beneficiary_list_id=beneficiary_list.beneficiary_list_id,
+            benefit_program_mnemonic=disbursement_envelope_reponse_message.benefit_program_mnemonic,
+            benefit_code_id=int(disbursement_envelope_reponse_message.benefit_code_id),
+            benefit_type=disbursement_envelope_reponse_message.benefit_type.value,
+            disbursement_cycle_id=int(
+                disbursement_envelope_reponse_message.disbursement_cycle_id
+            ),
+            cycle_code_mnemonic=disbursement_envelope_reponse_message.cycle_code_mnemonic,
+            number_of_beneficiaries=disbursement_envelope_reponse_message.number_of_beneficiaries,
+            number_of_disbursements=disbursement_envelope_reponse_message.number_of_disbursements,
+            total_disbursement_quantity=disbursement_envelope_reponse_message.total_disbursement_quantity,
+            measurement_unit=disbursement_envelope_reponse_message.measurement_unit,
+            disbursement_schedule_date=disbursement_envelope_reponse_message.disbursement_schedule_date,
+        )
+        disbursement_envelopes.append(disbursement_envelope)
+        _logger.info(
+            f"Envelope creation successful for disbursement envelope id: {disbursement_envelope_reponse_message.disbursement_envelope_id}"
+        )
+    return disbursement_envelopes

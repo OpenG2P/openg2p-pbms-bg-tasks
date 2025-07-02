@@ -24,8 +24,8 @@ dynamic = ["version"]
 [project.urls]
 Homepage = "https://openg2p.org"
 Documentation = "https://docs.openg2p.org/"
-Repository = "https://github.com/OpenG2P/openg2p-pbms-eligibility-entitlement-engine"
-Source = "https://github.com/OpenG2P/openg2p-pbms-eligibility-entitlement-engine"
+Repository = "https://github.com/OpenG2P/openg2p-pbms-gen2-bg-tasks"
+Source = "https://github.com/OpenG2P/openg2p-pbms-gen2-bg-tasks"
 
 [tool.hatch.version]
 path = "src/openg2p_pbms_models/__init__.py"
