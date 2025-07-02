@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import date
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from fastapi_cache.decorator import cache
@@ -411,9 +411,9 @@ class RegistryStudent(RegistryInterface):
                 registrant_map[str(registrant.unique_id)] = registrant
 
         # Collect entitlements per benefit_code_id
-        entitlements: Dict[int, list[float]] = {}
-        entitlements_male: Dict[int, list[float]] = {}
-        entitlements_female: Dict[int, list[float]] = {}
+        entitlements: Dict[Any, list[float]] = {}
+        entitlements_male: Dict[Any, list[float]] = {}
+        entitlements_female: Dict[Any, list[float]] = {}
 
         for beneficiary_list_detail in beneficiary_list_details:
             for registrant_detail in beneficiary_list_detail.registrant_details:
@@ -467,8 +467,8 @@ class RegistryStudent(RegistryInterface):
         )
 
     def compute_stats_dict(
-        self, entitlements_dict: Dict[int, list[float]]
-    ) -> Dict[str, Dict[int, float]]:
+        self, entitlements_dict: Dict[Any, list[float]]
+    ) -> Dict[str, Dict[Any, float]]:
         # Returns a dict of stats per benefit_code_id for each stat
         stats = {
             "average": {},

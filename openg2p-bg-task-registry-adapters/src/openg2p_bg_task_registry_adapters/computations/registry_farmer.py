@@ -60,21 +60,6 @@ class RegistryFarmer(RegistryInterface):
             beneficiary_list_summary_farmer.average_entitlement_per_person
         )
 
-        # if formated:
-        #     number_of_registrants = format(
-        #         beneficiary_list_summary_farmer.number_of_registrants, ","
-        #     )
-        #     total_disbursement_quantity = (
-        #         format(beneficiary_list_summary_farmer.total_disbursement_quantity, ",")
-        #         + " "
-        #         + beneficiary_list_summary_farmer.entitlement_units
-        #     )
-        #     average_entitlement_per_registrant = (
-        #         format(beneficiary_list_summary_farmer.average_entitlement_per_person, ",")
-        #         + " "
-        #         + beneficiary_list_summary_farmer.entitlement_units
-        #     )
-
         summary_farmer_payload = BeneficiaryListSummaryFarmerPayload(
             beneficiary_list_summary=BeneficiaryListSummary(
                 id=beneficiary_list_summary_farmer.id,
