@@ -1,4 +1,3 @@
-import json
 import logging
 from datetime import datetime, timezone
 from typing import List
@@ -14,8 +13,7 @@ from openg2p_pbms_models.models import (
     G2PProgramDefinition,
     StatusEnum,
 )
-from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
@@ -41,16 +39,11 @@ def entitlement_worker(id: str):
     with bg_task_session_maker() as bg_task_session, sr_session_maker() as sr_session, pbms_session_maker() as pbms_session:
         beneficiary_list_details = None
         try:
-            # Fetch the beneficiary list entry from pbms db using id
             beneficiary_list_details = (
                 bg_task_session.query(BeneficiaryListDetails)
                 .filter(BeneficiaryListDetails.id == id)
                 .first()
             )
-            if not beneficiary_list_details:
-                _logger.error(f"No BeneficiaryListDetails entry found for id: {id}")
-                return
-
             beneficiary_list = (
                 pbms_session.query(G2PBeneficiaryList)
                 .filter(
@@ -59,11 +52,6 @@ def entitlement_worker(id: str):
                 )
                 .first()
             )
-            if not beneficiary_list:
-                _logger.error(
-                    f"No G2PBeneficiaryList entry found for beneficiary_list_id: {beneficiary_list_details.beneficiary_list_id}"
-                )
-                return
 
             target_registry = (
                 pbms_session.query(G2PProgramDefinition.target_registry)
@@ -71,7 +59,6 @@ def entitlement_worker(id: str):
                 .one_or_none()
             )
             target_registry = target_registry[0]
-            _logger.info(f"target_registry {target_registry}")
 
             entitlement_rule_definitions: List[G2PEntitlementRuleDefinition] = (
                 pbms_session.query(G2PEntitlementRuleDefinition)
@@ -82,11 +69,9 @@ def entitlement_worker(id: str):
                 .all()
             )
 
-            registrant_details_list: List[RegistrantDetails] = []
+            registrant_details: List[RegistrantDetails] = []
 
-            for registrant_detail in json.loads(
-                beneficiary_list_details.registrant_details
-            ):
+            for registrant_detail in beneficiary_list_details.registrant_details:
                 registrant_detail = RegistrantDetails(**registrant_detail)
 
                 for entitlement_rule_definition in entitlement_rule_definitions:
@@ -131,102 +116,65 @@ def entitlement_worker(id: str):
                                     entitlement_rule_definition,
                                     registry_interface,
                                 )
-                                _logger.info(
+                                _logger.debug(
                                     f"Calculated entitlement: {calculated_entitlement}"
                                 )
                                 update_registrant_detail_json(
                                     registrant_detail,
-                                    entitlement_rule_definition,
                                     benefit_code_id,
                                     max_quantity,
                                     calculated_entitlement,
                                 )
 
                         except Exception as e:
-                            _logger.error(
+                            raise Exception(
                                 f"Error processing entitlement rule id {entitlement_rule_definition.id} for registrant id in request beneficiary list id {id}: {e}"
-                            )
-                            raise e
-                registrant_details_list.append(registrant_detail)
+                            ) from e
+
+                registrant_details.append(registrant_detail)
 
                 _logger.debug(
-                    f"Registrant with id {registrant_detail.registrant_id} is entitled for entitlement: {registrant_detail.entitlement}"
-                )
-                _logger.info(
-                    f"Entitlement processed for registrant_id {registrant_detail.registrant_id} for beneficiary_list_id"
+                    f"Entitlement processed for registrant_id {registrant_detail.registrant_id}: {registrant_detail}"
                 )
 
             beneficiary_list_details.registrant_details = [
                 registrant_detail.model_dump(mode="json")
-                for registrant_detail in registrant_details_list
+                for registrant_detail in registrant_details
             ]
 
+            beneficiary_list_details.entitlement_number_of_attempts += 1
+            beneficiary_list_details.entitlement_processed_date = datetime.now(
+                timezone.utc
+            )
             beneficiary_list_details.entitlement_process_status = (
-                StatusEnum.COMPLETE.value
+                StatusEnum.complete.value
             )
-
-            _logger.info(
-                f"Computing and updating entitlement summary statistics for beneficiary_list_id: {beneficiary_list_details.beneficiary_list_id}"
-            )
-            try:
-                beneficiary_list = lock_beneficiary_list(
-                    pbms_session, beneficiary_list_details.beneficiary_list_id
-                )
-                beneficiary_list.number_of_entitlements_processed += (
-                    beneficiary_list_details.number_of_registrants
-                )
-
-                # Compute entilement statistics if all entitlemts are processed
-                if (
-                    beneficiary_list.number_of_entitlements_processed
-                    == beneficiary_list.number_of_registrants
-                ):
-                    compute_entitlement_statistics(
-                        id,
-                        bg_task_session,
-                        sr_session,
-                        beneficiary_list_details,
-                        target_registry,
-                    )
-
-                    # Update entitlement request beneficiary list entry status
-                    beneficiary_list.entitlement_process_status = (
-                        StatusEnum.COMPLETE.value
-                    )
-                    beneficiary_list.entitlement_processed_date = datetime.now(
-                        timezone.utc
-                    )
-
-            except Exception:
-                return
 
             bg_task_session.commit()
             pbms_session.commit()
 
         except Exception as e:
-            error_message = f"Error during processing entitlement request for beneficiary list id {id}: {str(e)}"
-            _logger.error(error_message)
-
+            _logger.error(
+                f"Error during processing entitlement request for beneficiary list id {id}: {str(e)}"
+            )
             bg_task_session.rollback()
             pbms_session.rollback()
 
-            if beneficiary_list and beneficiary_list_details:
-                beneficiary_list.entitlement_number_of_attempts += 1
-                beneficiary_list.entitlement_process_status = (
-                    StatusEnum.PENDING.value
-                    if beneficiary_list.entitlement_number_of_attempts
-                    < _config.worker_max_attempts
-                    else StatusEnum.FAILED.value
-                )
-                beneficiary_list.entitlement_latest_error_code = str(e)
-                beneficiary_list_details.entitlement_process_status = (
-                    beneficiary_list.entitlement_process_status
-                )
-                bg_task_session.commit()
-                pbms_session.commit()
+            beneficiary_list_details.entitlement_number_of_attempts += 1
+            beneficiary_list_details.entitlement_processed_date = datetime.now(
+                timezone.utc
+            )
+            beneficiary_list_details.entitlement_process_status = (
+                StatusEnum.pending.value
+                if beneficiary_list_details.entitlement_number_of_attempts
+                < _config.worker_max_attempts
+                else StatusEnum.failed.value
+            )
+            beneficiary_list_details.entitlement_latest_error_code = str(e)
+            bg_task_session.commit()
 
         _logger.info(
-            f"Completed processing entitlement request for beneficiary list id: {id}"
+            f"Completed processing entitlements for beneficiary list details id: {id}"
         )
 
 
@@ -249,35 +197,13 @@ def compute_entitlement_statistics(
         )
 
     except Exception as e:
-        _logger.error(
+        raise Exception(
             f"Error computing entitlement summary statistics for beneficiary list id {id}: {e}"
-        )
-        return
-
-
-def lock_beneficiary_list(pbms_session: Session, beneficiary_list_id: str):
-    beneficiary_list: G2PBeneficiaryList = None
-    number_of_lock_attempts: int = 0
-    while number_of_lock_attempts < 10:
-        try:
-            beneficiary_list = (
-                pbms_session.query(G2PBeneficiaryList)
-                .filter_by(beneficiary_list_id=beneficiary_list_id)
-                .with_for_update(nowait=True)
-                .one()
-            )
-            number_of_lock_attempts += 1
-        except OperationalError as e:
-            raise Exception(
-                f"Failed to acquire lock on beneficiary list after {number_of_lock_attempts} attempts: {str(e)}"
-            ) from e
-
-    return beneficiary_list
+        ) from e
 
 
 def update_registrant_detail_json(
     registrant_detail,
-    entitlement_rule_definition,
     benefit_code_id,
     max_quantity,
     calculated_entitlement,
@@ -306,13 +232,16 @@ def update_registrant_detail_json(
 def calculate_entitlement(
     sr_session, registrant_detail, entitlement_rule_definition, registry_interface
 ):
-    multiplier: int = 1
+    multiplier: float = 1.0
     if entitlement_rule_definition.multiplier:
         multiplier = registry_interface.get_entitlement_multiplier(
             entitlement_rule_definition.multiplier,
             registrant_detail.registrant_id,
             sr_session,
         )
-    calculated_entitlement = multiplier * entitlement_rule_definition.quantity
+    calculated_entitlement = round(
+        multiplier * entitlement_rule_definition.quantity,
+        entitlement_rule_definition.decimal_places,
+    )
 
     return calculated_entitlement

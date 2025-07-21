@@ -1,19 +1,18 @@
 from typing import Any
 
-from jose import jwt
-
 
 def create_jwt_token(
     payload: dict[str, Any], private_key: str, detatched_jwt: bool = True
 ) -> str:
-    token = jwt.encode(
-        payload, private_key, algorithm="RS256", headers={"alg": "RS256", "typ": "JWT"}
-    )
+    # TODO: enable
+    # token = jwt.encode(
+    #     payload, private_key, algorithm="RS256", headers={"alg": "RS256", "typ": "JWT"}
+    # )
 
-    if detatched_jwt:
-        return detach_payload_from_jwt(token)
+    # if detatched_jwt:
+    #     return detach_payload_from_jwt(token)
 
-    return token
+    return None
 
 
 def detach_payload_from_jwt(token: str) -> str:

@@ -45,6 +45,10 @@ celery_app.conf.beat_schedule = {
         "task": "entitlement_beat_producer",
         "schedule": _config.producer_frequency,
     },
+    "entitlement_summary_beat_producer": {
+        "task": "entitlement_summary_beat_producer",
+        "schedule": _config.producer_frequency,
+    },
     "disbursement_envelope_creation_beat_producer": {
         "task": "disbursement_envelope_creation_beat_producer",
         "schedule": _config.producer_frequency,

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"
 
+    # TODO: separate base_url, endpoints
     g2p_bridge_disbursement_url: str = "http://g2p_bridge_disbursement_url"
     g2p_bridge_envelope_creation_url: str = "http://g2p_bridge_envelope_creation_url"
 

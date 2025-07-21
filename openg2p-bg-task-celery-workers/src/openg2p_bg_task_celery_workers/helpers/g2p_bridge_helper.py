@@ -1,10 +1,8 @@
 import requests
-from openg2p_bg_task_models.schemas import (
-    Disbursement,
+from openg2p_bg_task_models.schemas import Disbursement
+from openg2p_g2p_bridge_models.schemas import (
     DisbursementEnvelopeRequest,
     DisbursementEnvelopeResponse,
-)
-from openg2p_g2p_bridge_models.schemas import (
     DisbursementPayload,
     DisbursementRequest,
     DisbursementResponse,
@@ -18,7 +16,7 @@ class G2PBridgeDisbursementHelper:
         self._logger = logger
         self._create_jwt_token = create_jwt_token_func
 
-    def create_disbursement_envelope(self, disbursement_envelope_request_message):
+    def create_disbursement_envelopes(self, disbursement_envelope_request_message):
         """
         Sends a request to the bridge to create a disbursement envelope.
         """
@@ -26,7 +24,7 @@ class G2PBridgeDisbursementHelper:
             version="1.0.0",
             message_id="string",
             message_ts="string",
-            action="create_disbursement_envelope",
+            action="create_disbursement_envelopes",
             sender_id=self._config.sender_id,
             sender_uri="",
             receiver_id="",
@@ -41,7 +39,7 @@ class G2PBridgeDisbursementHelper:
         disbursement_envelope_request_json = disbursement_envelope_request.model_dump(
             mode="json"
         )
-        self._logger.debug(
+        self._logger.info(
             f"Disbursement Envelope Request: {disbursement_envelope_request_json}"
         )
 
@@ -63,12 +61,12 @@ class G2PBridgeDisbursementHelper:
                 json=disbursement_envelope_request_json,
                 headers=headers,
             )
+            self._logger.info(f"Response: {response.json()}")
             response.raise_for_status()
 
             disbursement_envelope_response = (
                 DisbursementEnvelopeResponse.model_validate(response.json())
             )
-            self._logger.debug(f"Response: {disbursement_envelope_response}")
 
             return disbursement_envelope_response, None
 
@@ -89,11 +87,14 @@ class G2PBridgeDisbursementHelper:
             disbursement = Disbursement(**disbursement)
 
             disbursement_payload = DisbursementPayload(
-                # mis_reference_number=disbursement_batch.beneficiary_list_details_id,
+                disbursement_id=disbursement.disbursement_id,
+                # mis_reference_number=ddisbursement_amountisbursement_batch.beneficiary_list_details_id,
                 disbursement_envelope_id=disbursement_batch.disbursement_envelope_id,
                 beneficiary_id=disbursement.beneficiary_id,
-                beneficiary_name="Beneficiary Name",
-                disbursement_amount=disbursement.entitlement,
+                beneficiary_name=None,
+                disbursement_quantity=disbursement.entitlement,
+                disbursement_cycle_id=int(disbursement_batch.disbursement_cycle_id),
+                disbursement_batch_control_id=disbursement_batch.id,
                 narrative=narrative,
             )
             disbursement_payloads.append(disbursement_payload)
@@ -112,13 +113,15 @@ class G2PBridgeDisbursementHelper:
         )
 
         disbursement_request = DisbursementRequest(
-            header=disbursement_header, message=disbursement_payloads
+            header=disbursement_header,
+            disbursement_batch_control_id=disbursement_batch.id,
+            message=disbursement_payloads,
         )
         disbursement_request_json = disbursement_request.model_dump(mode="json")
         self._logger.debug(f"Disbursement request payload: {disbursement_request_json}")
 
         disbursement_url = self._config.g2p_bridge_disbursement_url
-        self._logger.debug(f"Disbursement URL: {disbursement_url}")
+        self._logger.info(f"Disbursement URL: {disbursement_url}")
 
         jwt_token = self._create_jwt_token(
             disbursement_request_json, self._config.private_key

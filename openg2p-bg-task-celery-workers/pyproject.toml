@@ -20,7 +20,8 @@ dependencies = [
   "openg2p-fastapi-auth",
   "celery",
   "requests",
-  "python-jose"
+  "python-jose",
+  "fastnanoid"
 ]
 dynamic = ["version"]
 

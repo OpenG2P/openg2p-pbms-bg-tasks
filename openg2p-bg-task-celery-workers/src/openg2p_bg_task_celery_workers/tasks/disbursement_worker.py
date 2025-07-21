@@ -1,7 +1,8 @@
-import json
 import logging
+from datetime import datetime, timezone
 
 from openg2p_bg_task_models.models import DisbursementBatch
+from openg2p_g2pconnect_common_lib.schemas import StatusEnum as StatusEnumCommon
 from openg2p_pbms_models.models import (
     G2PBeneficiaryList,
     G2PDisbursementCycle,
@@ -97,36 +98,26 @@ def disbursement_worker(id: str):
             if error:
                 raise Exception(f"Error creating disbursement: {error}")
 
-            if isinstance(disbursement_batch.disbursements, str):
-                disbursements = json.loads(disbursement_batch.disbursements)
-            else:
-                disbursements = disbursement_batch.disbursements
-
-            for disbursement_response_message in disbursement_response.message:
-                _logger.debug(
-                    f"Disbursement response: {disbursement_response_message.model_dump(mode='json')}"
+            if (
+                disbursement_response
+                and hasattr(disbursement_response, "header")
+                and getattr(disbursement_response.header, "status", None)
+                == StatusEnumCommon.succ
+            ):
+                disbursement_batch.disbursement_number_of_attempts += 1
+                disbursement_batch.disbursement_processed_date = datetime.now(
+                    timezone.utc
                 )
-                for disbursement in disbursements:
-                    if (
-                        disbursement.get("beneficiary_id")
-                        == disbursement_response_message.beneficiary_id
-                    ):
-                        disbursement[
-                            "disbursement_id"
-                        ] = disbursement_response_message.disbursement_id
-                        break
-                else:
-                    _logger.warning(
-                        f"No matching disbursement found in batch {disbursement_batch.id} for beneficiary_id {disbursement_response_message.beneficiary_id}"
-                    )
-            disbursement_batch.disbursements = json.dumps(disbursements)
+                disbursement_batch.disbursement_status = StatusEnum.complete.value
 
-            # Update the disbursement batch status
-            disbursement_batch.disbursement_status = StatusEnum.COMPLETE.value
-            bg_task_session.commit()
-            _logger.info(
-                f"Disbursements created successfully for disbursement batch id: {id}"
-            )
+                bg_task_session.commit()
+                _logger.info(
+                    f"Disbursements created successfully for disbursement batch id: {id}"
+                )
+            else:
+                raise Exception(
+                    f"Disbursement creation failed for disbursement batch id: {id}"
+                )
 
         except Exception as e:
             _logger.error(f"Error in disbursement batch worker: {e}")
@@ -134,6 +125,17 @@ def disbursement_worker(id: str):
             # Rollback all sessions
             bg_task_session.rollback()
 
-            if disbursement_batch:
-                disbursement_batch.disbursement_status = StatusEnum.PENDING.value
-                bg_task_session.commit()
+            disbursement_batch.disbursement_number_of_attempts += 1
+            disbursement_batch.disbursement_processed_date = datetime.now(timezone.utc)
+            disbursement_batch.disbursement_status = (
+                StatusEnum.pending.value
+                if disbursement_batch.disbursement_number_of_attempts
+                < _config.worker_max_attempts
+                else StatusEnum.failed.value
+            )
+            disbursement_batch.disbursement_latest_error_code = str(e)
+            bg_task_session.commit()
+
+        _logger.info(
+            "Completed processing disbursements for disbursement batch id %s" % id
+        )

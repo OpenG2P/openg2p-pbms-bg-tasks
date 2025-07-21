@@ -36,19 +36,19 @@ def disbursement_envelope_creation_beat_producer():
                         G2PBeneficiaryList.list_stage
                         == ListStageEnum.DISBURSEMENT.value,
                         G2PBeneficiaryList.entitlement_process_status
-                        == StatusEnum.COMPLETE.value,
+                        == StatusEnum.complete.value,
                         G2PBeneficiaryList.envelope_creation_status
-                        == StatusEnum.PENDING.value,
+                        == StatusEnum.pending.value,
                     )
                 )
-                .limit(_config.batch_size)
+                .limit(_config.no_of_tasks_to_process)
             )
             .scalars()
             .all()
         )
 
         for beneficiary_list in beneficiary_lists:
-            beneficiary_list.envelope_creation_status = StatusEnum.PROCESSING.value
+            beneficiary_list.envelope_creation_status = StatusEnum.processing.value
             worker_type = WorkerTypes.DISBURSEMENT_ENVELOPE_CREATION_WORKER
 
             pbms_session.commit()

@@ -31,9 +31,9 @@ def entitlement_beat_producer():
                 .filter(
                     # BeneficiaryListDetails.beneficiary_list_id == beneficiary_list.beneficiary_list_id,
                     BeneficiaryListDetails.entitlement_process_status
-                    == StatusEnum.PENDING.value
+                    == StatusEnum.pending.value
                 )
-                .limit(_config.batch_size)
+                .limit(_config.no_of_tasks_to_process)
             )
             .scalars()
             .all()
@@ -48,12 +48,12 @@ def entitlement_beat_producer():
             )
 
             beneficiary_list_detail.entitlement_process_status = (
-                StatusEnum.PROCESSING.value
+                StatusEnum.processing.value
             )
             bg_task_session.add(beneficiary_list_detail)
 
             _logger.info(
-                f"Updating status for {WorkerTypes.ENTITLEMENT_WORKER} to PROCESSING in Benficiary List Details ID: {beneficiary_list_detail.id}"
+                f"Updating status for {WorkerTypes.ENTITLEMENT_WORKER} to processing in Benficiary List Details ID: {beneficiary_list_detail.id}"
             )
 
             # Send task to appropriate celery worker
