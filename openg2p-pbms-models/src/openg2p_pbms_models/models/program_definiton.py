@@ -42,14 +42,10 @@ class G2PProgramDefinition(BaseORMModel):
     disbursement_frequency = mapped_column(
         SqlEnum(DisbursementFrequency), nullable=True
     )
-
-    disbursement_day_of_month = mapped_column(Integer, nullable=True)
-    disbursement_day_of_week = mapped_column(String, nullable=True)
-    disbursement_start_month = mapped_column(String, nullable=True)
+    enrollment_frequency = mapped_column(SqlEnum(DisbursementFrequency), nullable=True)
     beneficiary_list = mapped_column(SqlEnum(BeneficiaryList), nullable=False)
 
-    distribution_through_agencies = mapped_column(Boolean, default=True)
-    only_direct_credit_allowed = mapped_column(Boolean, default=True)
+    service_providers_required = mapped_column(Boolean, default=True)
     on_demand_cycle_allowed = mapped_column(Boolean, default=False)
 
     # Many2many placeholder (actual association table/model needed for full support)
@@ -62,9 +58,6 @@ class G2PProgramDefinition(BaseORMModel):
     # eligibility_rule_ids = mapped_column(JSON, nullable=True)
     # entitlement_rule_ids = mapped_column(JSON, nullable=True)
 
-    show_disbursement_day_of_week = mapped_column(Boolean, default=False)
-    show_disbursement_day_of_month = mapped_column(Boolean, default=False)
-    show_disbursement_start_month = mapped_column(Boolean, default=False)
     show_label_for_beneficiary_list = mapped_column(Boolean, default=False)
 
     label_for_beneficiary_list_id = mapped_column(

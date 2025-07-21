@@ -2,11 +2,11 @@ import enum
 
 
 class StatusEnum(enum.Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETE = "complete"
-    NOT_APPLICABLE = "not_applicable"
-    FAILED = "failed"
+    pending = "pending"
+    processing = "processing"
+    complete = "complete"
+    not_applicable = "not_applicable"
+    failed = "failed"
 
 
 class ListWorkflowStatusEnum(enum.Enum):
