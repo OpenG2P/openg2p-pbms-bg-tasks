@@ -1,8 +1,8 @@
 import logging
 from typing import List
 
-from openg2p_pbms_models.models import G2PBeneficiaryList, StatusEnum
 from openg2p_bg_task_models.models import BeneficiaryListDetails
+from openg2p_pbms_models.models import G2PBeneficiaryList, StatusEnum
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -37,16 +37,22 @@ def entitlement_summary_beat_producer():
             .scalars()
             .all()
         )
-        _logger.info(f"Found {len(beneficiary_lists)} pending entitlement summary requests")
+        _logger.info(
+            f"Found {len(beneficiary_lists)} pending entitlement summary requests"
+        )
 
         for beneficiary_list in beneficiary_lists:
             beneficiary_list_details: List[BeneficiaryListDetails] = (
                 bg_task_session.query(BeneficiaryListDetails)
-                .filter(BeneficiaryListDetails.beneficiary_list_id == beneficiary_list.beneficiary_list_id)
+                .filter(
+                    BeneficiaryListDetails.beneficiary_list_id
+                    == beneficiary_list.beneficiary_list_id
+                )
                 .all()
             )
             if beneficiary_list_details and all(
-                beneficiary_list_detail.entitlement_process_status == StatusEnum.complete.value
+                beneficiary_list_detail.entitlement_process_status
+                == StatusEnum.complete.value
                 for beneficiary_list_detail in beneficiary_list_details
             ):
                 # Send task to appropriate celery worker
@@ -59,11 +65,15 @@ def entitlement_summary_beat_producer():
                     f"Sent task to {WorkerTypes.ENTITLEMENT_SUMMARY_WORKER} for beneficiary_list_id: {beneficiary_list.id}"
                 )
 
-                beneficiary_list.entitlement_process_status = StatusEnum.processing.value
+                beneficiary_list.entitlement_process_status = (
+                    StatusEnum.processing.value
+                )
 
                 _logger.info(
                     f"Updating status for {WorkerTypes.BENEFICIARY_LIST_WORKER} to processing in beneficiary list id: {beneficiary_list.id}"
                 )
         pbms_session.commit()
 
-    _logger.info("Completed processing pending entitlement summary requests for beneficiary lists")
+    _logger.info(
+        "Completed processing pending entitlement summary requests for beneficiary lists"
+    )

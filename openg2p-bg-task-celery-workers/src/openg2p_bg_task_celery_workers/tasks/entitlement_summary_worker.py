@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime, timezone
-from typing import List
 
 from openg2p_bg_task_registry_adapters.factory import RegistryFactory
 from openg2p_bg_task_registry_adapters.interface import RegistryInterface
@@ -37,9 +36,7 @@ def entitlement_summary_worker(id: int):
         try:
             beneficiary_list: G2PBeneficiaryList = (
                 pbms_session.query(G2PBeneficiaryList)
-                .filter(
-                    G2PBeneficiaryList.id == id
-                )
+                .filter(G2PBeneficiaryList.id == id)
                 .first()
             )
 
@@ -51,8 +48,8 @@ def entitlement_summary_worker(id: int):
             target_registry = target_registry[0]
 
             try:
-                registry_interface: RegistryInterface = RegistryFactory.get_registry_class(
-                    target_registry
+                registry_interface: RegistryInterface = (
+                    RegistryFactory.get_registry_class(target_registry)
                 )
                 registry_interface.compute_entitlement_statistics(
                     beneficiary_list.beneficiary_list_id,
@@ -67,20 +64,18 @@ def entitlement_summary_worker(id: int):
             except Exception as e:
                 raise Exception(
                     f"Error computing entitlement summary statistics for beneficiary list id {id}: {e}"
-                )
+                ) from e
 
             beneficiary_list.entitlement_number_of_attempts += 1
-            beneficiary_list.entitlement_process_status = (
-                StatusEnum.complete.value
-            )
-            beneficiary_list.entitlement_processed_date = datetime.now(
-                timezone.utc
-            )
+            beneficiary_list.entitlement_process_status = StatusEnum.complete.value
+            beneficiary_list.entitlement_processed_date = datetime.now(timezone.utc)
             bg_task_session.commit()
             pbms_session.commit()
 
         except Exception as e:
-            _logger.error(f"Error during processing entitlement request for beneficiary list id {id}: {str(e)}")
+            _logger.error(
+                f"Error during processing entitlement request for beneficiary list id {id}: {str(e)}"
+            )
             bg_task_session.rollback()
             pbms_session.rollback()
 
@@ -88,7 +83,8 @@ def entitlement_summary_worker(id: int):
             beneficiary_list.entitlement_processed_date = datetime.now(timezone.utc)
             beneficiary_list.entitlement_process_status = (
                 StatusEnum.pending.value
-                if beneficiary_list.entitlement_number_of_attempts < _config.worker_max_attempts
+                if beneficiary_list.entitlement_number_of_attempts
+                < _config.worker_max_attempts
                 else StatusEnum.failed.value
             )
             beneficiary_list.entitlement_latest_error_code = str(e)
