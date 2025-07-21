@@ -1,7 +1,7 @@
 import uuid
 
 from openg2p_fastapi_common.models import BaseORMModel
-from sqlalchemy import JSON, String, Integer, Float, DateTime
+from sqlalchemy import JSON, DateTime, Float, Integer, String
 from sqlalchemy.orm import mapped_column
 
 from .status_enum import StatusEnum

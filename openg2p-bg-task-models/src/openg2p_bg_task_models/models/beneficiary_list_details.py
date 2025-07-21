@@ -23,4 +23,3 @@ class BeneficiaryListDetails(BaseORMModel):
     entitlement_number_of_attempts = mapped_column(Integer, nullable=True, default=0)
     entitlement_processed_date = mapped_column(DateTime, nullable=True, default=None)
     entitlement_latest_error_code = mapped_column(String, nullable=True, default=None)
-
