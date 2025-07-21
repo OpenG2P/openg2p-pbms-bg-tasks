@@ -10,6 +10,9 @@ from openg2p_bg_task_models.schemas import (
 )
 from openg2p_bg_task_registry_adapters.factory import RegistryFactory
 from openg2p_bg_task_registry_adapters.interface import RegistryInterface
+from openg2p_bg_task_registry_adapters.schema import (
+    BeneficiaryListSummaryPayload,
+)
 from openg2p_fastapi_common.service import BaseService
 from openg2p_g2pconnect_common_lib.schemas import (
     StatusEnum,
@@ -39,14 +42,14 @@ class SummaryService(BaseService):
                         summary_request_payload.target_registry
                     )
                 )
-                beneficiary_list_summary: BeneficiaryListSummary = (
+                beneficiary_list_summary_payload: BeneficiaryListSummaryPayload = (
                     await registry_interface.get_summary(
                         summary_request_payload.beneficiary_list_id,
                         session,
                         formated=True,
                     )
                 )
-                return beneficiary_list_summary
+                return beneficiary_list_summary_payload
 
             except Exception as e:
                 _logger.error(f"Error fetching beneficiary list summary : {e}")
@@ -58,7 +61,7 @@ class SummaryService(BaseService):
     async def construct_summary_success_response(
         self,
         summary_request: SummaryRequest,
-        beneficiary_list_summary: BeneficiaryListSummary,
+        beneficiary_list_summary_payload: BeneficiaryListSummaryPayload,
     ) -> SummaryResponse:
         response = SummaryResponse(
             header=SyncResponseHeader(
@@ -67,7 +70,7 @@ class SummaryService(BaseService):
                 action=summary_request.header.action,
                 status=StatusEnum.succ,
             ),
-            message=beneficiary_list_summary,
+            message=beneficiary_list_summary_payload,
         )
         return response
 

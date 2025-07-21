@@ -55,14 +55,14 @@ class DisbursementController(BaseController):
                 disbursement_envelope_request, disbursement_envelope_response_payload
             )
             _logger.info("Disbursement Envelopes retrived successfully")
-            _logger.info(
+            _logger.debug(
                 "Disbursement Envelope response: %s", disbursement_envelope_response
             )
             return disbursement_envelope_response
 
         except BGTaskException as e:
             error_response: DisbursementEnvelopeResponse = await self.disbursement_envelope_service.construct_disbursement_envelope_error_response(
-                disbursement_envelope_request, e.message_request, e.code
+                disbursement_envelope_request, e.code
             )
             return error_response
 
@@ -86,6 +86,6 @@ class DisbursementController(BaseController):
 
         except BGTaskException as e:
             error_response: DisbursementBatchResponse = await self.disbursement_batch_service.construct_disbursement_batch_error_response(
-                disbursement_batch_request, e.message_request, e.code
+                disbursement_batch_request, e.code
             )
             return error_response
