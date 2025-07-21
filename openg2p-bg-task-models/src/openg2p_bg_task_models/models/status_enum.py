@@ -2,7 +2,8 @@ import enum
 
 
 class StatusEnum(enum.Enum):
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETE = "complete"
-    NOT_APPLICABLE = "not_applicable"
+    pending = "pending"
+    processing = "processing"
+    failed = "failed"
+    complete = "complete"
+    not_applicable = "not_applicable"
