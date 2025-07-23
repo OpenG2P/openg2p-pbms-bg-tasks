@@ -1,5 +1,6 @@
-from jose import jwt
 from typing import Any
+
+from jose import jwt
 
 
 def create_jwt_token(
