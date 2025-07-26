@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
-from ..helpers import G2PBridgeDisbursementHelper, create_jwt_token
+from ..helpers import G2PBridgeDisbursementHelper
 
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
@@ -86,9 +86,7 @@ def disbursement_worker(id: str):
             )
 
             # Use the helper class for disbursement creation
-            bridge_disbursement_helper = G2PBridgeDisbursementHelper(
-                _config, _logger, create_jwt_token
-            )
+            bridge_disbursement_helper = G2PBridgeDisbursementHelper(_config, _logger)
             (
                 disbursement_response,
                 error,

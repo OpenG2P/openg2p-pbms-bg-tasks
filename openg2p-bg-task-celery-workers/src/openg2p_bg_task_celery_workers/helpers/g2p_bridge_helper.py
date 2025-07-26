@@ -9,12 +9,14 @@ from openg2p_g2p_bridge_models.schemas import (
 )
 from openg2p_g2pconnect_common_lib.schemas import RequestHeader
 
+from ..helpers import KeymanagerHelper
+
 
 class G2PBridgeDisbursementHelper:
-    def __init__(self, config, logger, create_jwt_token_func):
+    def __init__(self, config, logger):
         self._config = config
         self._logger = logger
-        self._create_jwt_token = create_jwt_token_func
+        self.keymanager_helper = KeymanagerHelper(self._config, self._logger)
 
     def create_disbursement_envelopes(self, disbursement_envelope_request_message):
         """
@@ -46,7 +48,7 @@ class G2PBridgeDisbursementHelper:
         envelope_creation_url = self._config.g2p_bridge_envelope_creation_url
         self._logger.info(f"Envelope Creation URL: {envelope_creation_url}")
 
-        jwt_token = self._create_jwt_token(
+        jwt_token = self.keymanager_helper.create_jwt_token(
             disbursement_envelope_request_json, self._config.private_key
         )
 
@@ -88,7 +90,6 @@ class G2PBridgeDisbursementHelper:
 
             disbursement_payload = DisbursementPayload(
                 disbursement_id=disbursement.disbursement_id,
-                # mis_reference_number=ddisbursement_amountisbursement_batch.beneficiary_list_details_id,
                 disbursement_envelope_id=disbursement_batch.disbursement_envelope_id,
                 beneficiary_id=disbursement.beneficiary_id,
                 beneficiary_name=None,
@@ -123,7 +124,7 @@ class G2PBridgeDisbursementHelper:
         disbursement_url = self._config.g2p_bridge_disbursement_url
         self._logger.info(f"Disbursement URL: {disbursement_url}")
 
-        jwt_token = self._create_jwt_token(
+        jwt_token = self.keymanager_helper.create_jwt_token(
             disbursement_request_json, self._config.private_key
         )
 

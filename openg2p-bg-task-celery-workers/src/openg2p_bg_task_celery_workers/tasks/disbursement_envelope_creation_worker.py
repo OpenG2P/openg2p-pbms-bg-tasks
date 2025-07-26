@@ -21,7 +21,6 @@ from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
 from ..config import Settings
-from ..helpers import create_jwt_token
 from ..helpers.g2p_bridge_helper import G2PBridgeDisbursementHelper
 
 _config = Settings.get_config()
@@ -96,9 +95,7 @@ def disbursement_envelope_creation_worker(id: int):
             )
 
             # Use the helper class for envelope creation
-            bridge_disbursement_helper = G2PBridgeDisbursementHelper(
-                _config, _logger, create_jwt_token
-            )
+            bridge_disbursement_helper = G2PBridgeDisbursementHelper(_config, _logger)
             (
                 disbursement_envelope_response,
                 error,

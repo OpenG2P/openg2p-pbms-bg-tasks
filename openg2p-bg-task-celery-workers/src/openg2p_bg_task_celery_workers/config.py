@@ -38,8 +38,12 @@ class Settings(BaseSettings):
     batch_size: int = 2000
     worker_max_attempts: int = 5
 
-    # JWT parameters
-    issuer: str = "issuer"
-    audience: str = "audience"
-    private_key: str = "private_key"
-    sender_id: str = "sender_id"
+    sign_key_keymanager_app_id: str = "PBMS"
+    sign_key_keymanager_ref_id: str = ""
+
+    keymanager_api_timeout: int = 10
+    keymanager_api_base_url: str = ""
+    keymanager_auth_enabled: bool = True
+    keymanager_auth_url: str = ""
+    keymanager_auth_client_id: str = "openg2p-pbms"
+    keymanager_auth_client_secret: str = ""
