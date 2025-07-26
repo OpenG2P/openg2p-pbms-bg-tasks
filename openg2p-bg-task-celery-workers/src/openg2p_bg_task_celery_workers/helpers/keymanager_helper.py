@@ -1,9 +1,9 @@
 import base64
 from datetime import datetime, timedelta, timezone
-from typing import Any
-import orjson
 
 import httpx
+import orjson
+
 
 class KeymanagerHelper:
     def __init__(self, config, logger):
@@ -51,8 +51,14 @@ class KeymanagerHelper:
                     "metadata": {},
                     "request": {
                         "dataToSign": self.urlsafe_b64encode(payload_bytes),
-                        "applicationId": getattr(self._config, "sign_key_keymanager_app_id", "") or "",
-                        "referenceId": getattr(self._config, "sign_key_keymanager_ref_id", "") or "",
+                        "applicationId": getattr(
+                            self._config, "sign_key_keymanager_app_id", ""
+                        )
+                        or "",
+                        "referenceId": getattr(
+                            self._config, "sign_key_keymanager_ref_id", ""
+                        )
+                        or "",
                         "includePayload": include_payload,
                         "includeCertificate": include_certificate,
                         "includeCertHash": include_cert_hash,
@@ -80,7 +86,9 @@ class KeymanagerHelper:
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                url, data=payload, timeout=getattr(self._config, "keymanager_api_timeout", 10)
+                url,
+                data=payload,
+                timeout=getattr(self._config, "keymanager_api_timeout", 10),
             )
         response_data = response.json()
         expires_in = response_data.get("expires_in", 900)
