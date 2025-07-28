@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     openapi_version: str = __version__
 
     # DB Driver Overwrite
-    db_driver: str = "postgres"
+    db_driver: str = "postgresql"
 
     # Social Registry Database
     db_username_sr: str = "postgres"

@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     openapi_version: str = __version__
 
     # DB Driver Overwrite
-    db_driver: str = "postgres"
+    db_driver: str = "postgresql"
 
     # BG Task Database
     db_username: str = "postgres"
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     db_dbname_pbms: str = "pbmsdb"
 
     # Background Task Database (async)
-    db_driver_async: str = "postgres+asyncpg"
+    db_driver_async: str = "postgresql+asyncpg"
     db_username_async: str = "postgres"
     db_password_async: str = "postgres"
     db_hostname_async: str = "localhost"
