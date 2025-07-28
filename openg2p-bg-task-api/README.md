@@ -12,4 +12,3 @@ This service provides a FastAPI-based HTTP API for managing background processin
 
 - **main.py**: Entry point. Initializes the FastAPI app and health check.
 - **app/**: Contains the application logic and API route definitions
- 
