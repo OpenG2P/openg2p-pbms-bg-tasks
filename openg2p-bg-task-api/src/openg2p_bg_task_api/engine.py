@@ -49,4 +49,6 @@ def construct_db_datasource(
     if db_dbname:
         datasource += f"/{db_dbname}"
 
+    _logger.info(f"Constructed Datasource: {datasource}")
+
     return datasource
