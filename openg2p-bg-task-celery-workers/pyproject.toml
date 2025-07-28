@@ -21,7 +21,8 @@ dependencies = [
   "celery",
   "requests",
   "python-jose",
-  "fastnanoid"
+  "fastnanoid",
+  "psycopg2"
 ]
 dynamic = ["version"]
 
