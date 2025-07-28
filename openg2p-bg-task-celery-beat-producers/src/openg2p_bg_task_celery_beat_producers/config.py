@@ -17,13 +17,22 @@ class Settings(BaseSettings):
         """
     openapi_version: str = __version__
 
-    db_datasource_bg_task: str = (
-        "postgresql://postgres:postgres@localhost:5432/bgtaskdb"
-    )
-    db_datasource_sr: str = (
-        "postgresql://postgres:postgres@localhost:5432/socialregistrydb"
-    )
-    db_datasource_pbms: str = "postgresql://postgres:postgres@localhost:5432/pbmsdb"
+    # DB Driver Overwrite
+    db_driver: str = "postgres"
+
+    # Social Registry Database
+    db_username_sr: str = "postgres"
+    db_password_sr: str = "postgres"
+    db_hostname_sr: str = "localhost"
+    db_port_sr: int = 5432
+    db_dbname_sr: str = "socialregistrydb"
+
+    # PBMS Database
+    db_username_pbms: str = "postgres"
+    db_password_pbms: str = "postgres"
+    db_hostname_pbms: str = "localhost"
+    db_port_pbms: int = 5432
+    db_dbname_pbms: str = "pbmsdb"
 
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"

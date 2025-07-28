@@ -45,7 +45,9 @@ class G2PBridgeDisbursementHelper:
             f"Disbursement Envelope Request: {disbursement_envelope_request_json}"
         )
 
-        envelope_creation_url = self._config.g2p_bridge_envelope_creation_url
+        envelope_creation_url = (
+            self._config.g2p_bridge_base_url + "/create_disbursement_envelopes"
+        )
         self._logger.info(f"Envelope Creation URL: {envelope_creation_url}")
 
         jwt_token = self.keymanager_helper.create_jwt_token(
@@ -121,7 +123,7 @@ class G2PBridgeDisbursementHelper:
         disbursement_request_json = disbursement_request.model_dump(mode="json")
         self._logger.debug(f"Disbursement request payload: {disbursement_request_json}")
 
-        disbursement_url = self._config.g2p_bridge_disbursement_url
+        disbursement_url = self._config.g2p_bridge_base_url + "/create_disbursements"
         self._logger.info(f"Disbursement URL: {disbursement_url}")
 
         jwt_token = self.keymanager_helper.create_jwt_token(
