@@ -38,7 +38,6 @@ def get_engine():
             _config.db_port_sr,
             _config.db_dbname_sr,
         )
-        print(f"Constructed Datasource: {_config.db_datasource}")
 
         db_engine_bg_task = create_async_engine(_config.db_datasource)
         db_engine_sr = create_async_engine(db_datasource_sr)
