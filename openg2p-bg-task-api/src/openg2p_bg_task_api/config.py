@@ -22,5 +22,5 @@ class Settings(BaseSettings):
     db_username_sr: str = "postgres"
     db_password_sr: str = "password"
     db_hostname_sr: str = "localhost"
-    db_port_sr: str = "5432"
+    db_port_sr: int = 5432
     db_dbname_sr: str = "socialregistrydb"
