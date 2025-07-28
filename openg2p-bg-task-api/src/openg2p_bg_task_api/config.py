@@ -18,9 +18,16 @@ class Settings(BaseSettings):
         """
     openapi_version: str = __version__
 
-    db_datasource_bg_task: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/bgtaskdb"
-    )
-    db_datasource_sr: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/socialregistrydb"
-    )
+    db_driver_sr: str = 'postgres+asyncpg'
+    db_username_sr: str = 'postgres'
+    db_password_sr: str = 'password'
+    db_hostname_sr: str = 'localhost'
+    db_port_sr: str = '5432'
+    db_dbname_sr: str = 'socialregistrydb'
+
+    db_driver_bg_task: str = 'postgres+asyncpg'
+    db_username_bg_task: str = 'postgres'
+    db_password_bg_task: str = 'password'
+    db_hostname_bg_task: str = 'localhost'
+    db_port_bg_task: str = '5432'
+    db_dbname_bg_task: str = 'bgtaskdb'
