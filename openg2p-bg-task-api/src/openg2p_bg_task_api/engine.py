@@ -8,6 +8,26 @@ _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
 
 
+def construct_db_datasource(
+    db_driver, db_username, db_password, db_hostname, db_port, db_dbname
+) -> str:
+    datasource = ""
+    if db_driver:
+        datasource += f"{db_driver}://"
+    if db_username:
+        datasource += f"{db_username}:{db_password}@"
+    if db_hostname:
+        datasource += db_hostname
+    if db_port:
+        datasource += f":{db_port}"
+    if db_dbname:
+        datasource += f"/{db_dbname}"
+
+    _logger.info(f"Constructed Datasource: {datasource}")
+
+    return datasource
+
+
 def get_engine():
     if _config.db_datasource:
         db_datasource_bg_task = construct_db_datasource(
@@ -32,23 +52,3 @@ def get_engine():
             "db_engine_bg_task": db_engine_bg_task,
             "db_engine_sr": db_engine_sr,
         }
-
-
-def construct_db_datasource(
-    db_driver, db_username, db_password, db_hostname, db_port, db_dbname
-) -> str:
-    datasource = ""
-    if db_driver:
-        datasource += f"{db_driver}://"
-    if db_username:
-        datasource += f"{db_username}:{db_password}@"
-    if db_hostname:
-        datasource += db_hostname
-    if db_port:
-        datasource += f":{db_port}"
-    if db_dbname:
-        datasource += f"/{db_dbname}"
-
-    _logger.info(f"Constructed Datasource: {datasource}")
-
-    return datasource
