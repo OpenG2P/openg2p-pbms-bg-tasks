@@ -1,8 +1,11 @@
+import logging
+
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from .config import Settings
 
 _config = Settings.get_config()
+_logger = logging.getLogger(_config.logging_default_logger_name)
 
 
 def get_engine():
@@ -29,8 +32,11 @@ def get_engine():
             "db_engine_bg_task": db_engine_bg_task,
             "db_engine_sr": db_engine_sr,
         }
-    
-def construct_db_datasource(db_driver, db_username, db_password, db_hostname, db_port, db_dbname) -> str:
+
+
+def construct_db_datasource(
+    db_driver, db_username, db_password, db_hostname, db_port, db_dbname
+) -> str:
     datasource = ""
     if db_driver:
         datasource += f"{db_driver}://"
