@@ -45,12 +45,11 @@ class Initializer(BaseInitializer):
     def init_db(self):
         if _config.db_datasource:
             db_engine = create_async_engine(
-                _config.db_datasource_bg_task, echo=_config.db_logging
+                _config.db_datasource, echo=_config.db_logging
             )
             dbengine.set(db_engine)
 
     def migrate_database(self, args):
-        _logger.info(f"Database migration completed{_config.db_datasource_bg_task}")
         super().migrate_database(args)
 
         async def migrate():
