@@ -17,28 +17,52 @@ class Settings(BaseSettings):
         """
     openapi_version: str = __version__
 
-    db_datasource_bg_task: str = (
-        "postgresql://postgres:postgres@localhost:5432/bgtaskdb"
-    )
-    db_datasource_sr: str = (
-        "postgresql://postgres:postgres@localhost:5432/socialregistrydb"
-    )
-    db_datasource_pbms: str = "postgresql://postgres:postgres@localhost:5432/pbmsdb"
-    db_datasource_bg_task_async: str = (
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/bgtaskdb"
-    )
+    # DB Driver Overwrite
+    db_driver: str = "postgresql"
+
+    # BG Task Database
+    db_username: str = "postgres"
+    db_password: str = "postgres"
+    db_hostname: str = "localhost"
+    db_port: int = 5432
+    db_dbname: str = "bgtaskdb"
+
+    # Social Registry Database
+    db_username_sr: str = "postgres"
+    db_password_sr: str = "postgres"
+    db_hostname_sr: str = "localhost"
+    db_port_sr: int = 5432
+    db_dbname_sr: str = "socialregistrydb"
+
+    # PBMS Database
+    db_username_pbms: str = "postgres"
+    db_password_pbms: str = "postgres"
+    db_hostname_pbms: str = "localhost"
+    db_port_pbms: int = 5432
+    db_dbname_pbms: str = "pbmsdb"
+
+    # Background Task Database (async)
+    db_driver_async: str = "postgresql+asyncpg"
+    db_username_async: str = "postgres"
+    db_password_async: str = "postgres"
+    db_hostname_async: str = "localhost"
+    db_port_async: int = 5432
+    db_dbname_async: str = "bgtaskdb"
 
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"
 
-    g2p_bridge_disbursement_url: str = "http://g2p_bridge_disbursement_url"
-    g2p_bridge_envelope_creation_url: str = "http://g2p_bridge_envelope_creation_url"
+    g2p_bridge_base_url: str = "http://g2p_bridge_base_url"
 
     batch_size: int = 2000
     worker_max_attempts: int = 5
 
-    # JWT parameters
-    issuer: str = "issuer"
-    audience: str = "audience"
-    private_key: str = "private_key"
-    sender_id: str = "sender_id"
+    sign_key_keymanager_app_id: str = "PBMS"
+    sign_key_keymanager_ref_id: str = ""
+
+    keymanager_api_timeout: int = 10
+    keymanager_api_base_url: str = ""
+    keymanager_auth_enabled: bool = True
+    keymanager_auth_url: str = ""
+    keymanager_auth_client_id: str = "openg2p-pbms"
+    keymanager_auth_client_secret: str = ""

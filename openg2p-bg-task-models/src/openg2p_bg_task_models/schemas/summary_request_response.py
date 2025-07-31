@@ -1,3 +1,6 @@
+from openg2p_bg_task_registry_adapters.schema import (
+    BeneficiaryListSummaryPayload,
+)
 from openg2p_g2pconnect_common_lib.schemas import (
     Request,
     SyncResponse,
@@ -15,4 +18,4 @@ class SummaryRequest(Request):
 
 
 class SummaryResponse(SyncResponse):
-    message: object
+    message: BeneficiaryListSummaryPayload

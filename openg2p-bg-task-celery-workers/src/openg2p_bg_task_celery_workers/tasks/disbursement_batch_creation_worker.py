@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 from typing import List
 
+import fastnanoid
 from openg2p_bg_task_models.models import (
     BeneficiaryListDetails,
     DisbursementBatch,
@@ -38,17 +39,11 @@ def disbursement_batch_creation_worker(id: int):
     with pbms_session_maker() as pbms_session, bg_task_session_maker() as bg_task_session:
         beneficiary_list = None
         try:
-            # Fetch the queue entry from pbms db using id
             beneficiary_list = (
                 pbms_session.query(G2PBeneficiaryList)
                 .filter(G2PBeneficiaryList.id == id)
                 .first()
             )
-
-            if not beneficiary_list:
-                raise Exception(f"No beneficiary list found for id: {id}")
-
-            # Get all BeneficiaryListDetails rows for the given beneficiary_list_id
             beneficiary_list_details = (
                 bg_task_session.query(BeneficiaryListDetails)
                 .filter(
@@ -57,7 +52,6 @@ def disbursement_batch_creation_worker(id: int):
                 )
                 .all()
             )
-            # Get all DisbursementEnvelope rows for the given beneficiary_list_id
             disbursement_envelopes = (
                 bg_task_session.query(DisbursementEnvelope)
                 .filter(
@@ -79,10 +73,15 @@ def disbursement_batch_creation_worker(id: int):
             for disbursement_envelope in disbursement_envelopes:
                 for beneficiary_list_detail in beneficiary_list_details:
                     disbursements_by_benefit_code: List[Disbursement] = []
+                    total_disbursement_quantity: float = 0
                     for registrant_detail in beneficiary_list_detail.registrant_details:
                         registrant_detail = RegistrantDetails(**registrant_detail)
+                        total_disbursement_quantity += registrant_detail.entitlement[
+                            disbursement_envelope.benefit_code_id
+                        ]
                         disbursement_by_benefit_code = Disbursement(
                             beneficiary_id=registrant_detail.registrant_id,
+                            disbursement_id=str(fastnanoid.generate(size=16)),
                             entitlement=registrant_detail.entitlement[
                                 disbursement_envelope.benefit_code_id
                             ],
@@ -97,6 +96,11 @@ def disbursement_batch_creation_worker(id: int):
                         disbursement_cycle_id=disbursement_envelope.disbursement_cycle_id,
                         beneficiary_list_details_id=beneficiary_list_detail.id,
                         beneficiary_list_id=beneficiary_list.beneficiary_list_id,
+                        benefit_code_id=disbursement_envelope.benefit_code_id,
+                        measurement_unit=disbursement_envelope.measurement_unit,
+                        number_of_beneficiaries=beneficiary_list_detail.number_of_registrants,
+                        number_of_disbursements=beneficiary_list_detail.number_of_registrants,
+                        total_disbursement_quantity=total_disbursement_quantity,
                     )
                     disbursement_batches_by_envelope_by_batch.append(
                         disbursement_batch_by_envelope
@@ -114,7 +118,7 @@ def disbursement_batch_creation_worker(id: int):
             )
 
             beneficiary_list.disbursement_batch_creation_status = (
-                StatusEnum.COMPLETE.value
+                StatusEnum.complete.value
             )
             beneficiary_list.dbc_number_of_attempts += 1
             beneficiary_list.dbc_processed_date = datetime.now(timezone.utc)
@@ -130,13 +134,15 @@ def disbursement_batch_creation_worker(id: int):
             pbms_session.rollback()
             bg_task_session.rollback()
 
-            if beneficiary_list:
-                beneficiary_list.dbc_number_of_attempts += 1
-                beneficiary_list.disbursement_batch_creation_status = (
-                    StatusEnum.PENDING.value
-                    if beneficiary_list.dbc_number_of_attempts
-                    < _config.worker_max_attempts
-                    else StatusEnum.FAILED.value
-                )
-                beneficiary_list.dbc_latest_error_code = str(e)
-                pbms_session.commit()
+            beneficiary_list.dbc_number_of_attempts += 1
+            beneficiary_list.disbursement_batch_creation_status = (
+                StatusEnum.pending.value
+                if beneficiary_list.dbc_number_of_attempts < _config.worker_max_attempts
+                else StatusEnum.failed.value
+            )
+            beneficiary_list.dbc_latest_error_code = str(e)
+            pbms_session.commit()
+
+        _logger.info(
+            "Completed disbursement batch creation for beneficiary_list_id: %s" % id
+        )

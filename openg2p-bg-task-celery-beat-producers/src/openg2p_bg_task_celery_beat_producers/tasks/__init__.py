@@ -7,4 +7,5 @@ from .disbursement_envelope_creation_beat_producer import (
     disbursement_envelope_creation_beat_producer,
 )
 from .entitlement_beat_producer import entitlement_beat_producer
+from .entitlement_summary_beat_producer import entitlement_summary_beat_producer
 from .worker_types import WorkerTypes

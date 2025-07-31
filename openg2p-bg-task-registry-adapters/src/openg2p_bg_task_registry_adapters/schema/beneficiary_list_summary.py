@@ -10,7 +10,7 @@ class BeneficiaryListSummary(BaseModel):
     program_mnemonic: str
     target_registry: str
     beneficiary_list_id: str
-    number_of_registrants: Any
+    number_of_registrants: int
     date_created: Optional[datetime]
     total_disbursement_quantity: Optional[dict] = None
     average_entitlement_per_registrant: Optional[dict] = None
@@ -18,3 +18,4 @@ class BeneficiaryListSummary(BaseModel):
 
 class BeneficiaryListSummaryPayload(BaseModel):
     beneficiary_list_summary: BeneficiaryListSummary
+    registry_summary: Optional[Any] = None

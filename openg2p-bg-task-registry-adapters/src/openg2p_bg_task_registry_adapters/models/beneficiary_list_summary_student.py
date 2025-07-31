@@ -7,9 +7,9 @@ class BeneficiaryListSummaryStudent(BeneficiaryListSummary):
     __tablename__ = "beneficiary_list_summary_student"
 
     age_mean = mapped_column(Float, nullable=True, default=0)
-    age_quartile_25 = mapped_column(Float, nullable=True, default=0)
-    age_quartile_50 = mapped_column(Float, nullable=True, default=0)
-    age_quartile_75 = mapped_column(Float, nullable=True, default=0)
+    age_q1 = mapped_column(Float, nullable=True, default=0)
+    age_q2 = mapped_column(Float, nullable=True, default=0)
+    age_q3 = mapped_column(Float, nullable=True, default=0)
     age_units = mapped_column(String, nullable=False, default="years")
 
     average_entitlement_female = mapped_column(JSON, nullable=True)

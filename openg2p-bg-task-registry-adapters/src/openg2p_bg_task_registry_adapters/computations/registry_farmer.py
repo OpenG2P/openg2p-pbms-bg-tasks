@@ -1,4 +1,3 @@
-import json
 from typing import List
 
 import numpy as np
@@ -52,14 +51,6 @@ class RegistryFarmer(RegistryInterface):
             beneficiary_list_summary_farmer.scalars().first()
         )
 
-        number_of_registrants = beneficiary_list_summary_farmer.number_of_registrants
-        total_disbursement_quantity = (
-            beneficiary_list_summary_farmer.total_disbursement_quantity
-        )
-        average_entitlement_per_registrant = (
-            beneficiary_list_summary_farmer.average_entitlement_per_person
-        )
-
         summary_farmer_payload = BeneficiaryListSummaryFarmerPayload(
             beneficiary_list_summary=BeneficiaryListSummary(
                 id=beneficiary_list_summary_farmer.id,
@@ -67,47 +58,47 @@ class RegistryFarmer(RegistryInterface):
                 program_mnemonic=beneficiary_list_summary_farmer.program_mnemonic,
                 target_registry=beneficiary_list_summary_farmer.target_registry,
                 beneficiary_list_id=beneficiary_list_summary_farmer.beneficiary_list_id,
-                number_of_registrants=number_of_registrants,
+                number_of_registrants=beneficiary_list_summary_farmer.number_of_registrants,
                 date_created=beneficiary_list_summary_farmer.date_created,
-                total_disbursement_quantity=total_disbursement_quantity,
-                average_entitlement_per_registrant=average_entitlement_per_registrant,
+                total_disbursement_quantity=beneficiary_list_summary_farmer.total_disbursement_quantity,
+                average_entitlement_per_registrant=beneficiary_list_summary_farmer.average_entitlement_per_person,
             ),
             registry_summary=BeneficiaryListSummaryFarmer(
                 land_holding_mean=f"{beneficiary_list_summary_farmer.land_holding_mean} {beneficiary_list_summary_farmer.land_holding_units}"
                 if beneficiary_list_summary_farmer.land_holding_mean is not None
                 else None,
-                land_holding_quartile_25=f"{beneficiary_list_summary_farmer.land_holding_quartile_25} {beneficiary_list_summary_farmer.land_holding_units}"
-                if beneficiary_list_summary_farmer.land_holding_quartile_25 is not None
+                land_holding_q1=f"{beneficiary_list_summary_farmer.land_holding_q1} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_q1 is not None
                 else None,
-                land_holding_quartile_50=f"{beneficiary_list_summary_farmer.land_holding_quartile_50} {beneficiary_list_summary_farmer.land_holding_units}"
-                if beneficiary_list_summary_farmer.land_holding_quartile_50 is not None
+                land_holding_q2=f"{beneficiary_list_summary_farmer.land_holding_q2} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_q2 is not None
                 else None,
-                land_holding_quartile_75=f"{beneficiary_list_summary_farmer.land_holding_quartile_75} {beneficiary_list_summary_farmer.land_holding_units}"
-                if beneficiary_list_summary_farmer.land_holding_quartile_75 is not None
+                land_holding_q3=f"{beneficiary_list_summary_farmer.land_holding_q3} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_q3 is not None
                 else None,
                 annual_income_mean=f"{beneficiary_list_summary_farmer.annual_income_mean} {beneficiary_list_summary_farmer.annual_income_units}"
                 if beneficiary_list_summary_farmer.annual_income_mean is not None
                 else None,
-                annual_income_quartile_25=f"{beneficiary_list_summary_farmer.annual_income_quartile_25} {beneficiary_list_summary_farmer.annual_income_units}"
-                if beneficiary_list_summary_farmer.annual_income_quartile_25 is not None
+                annual_income_q1=f"{beneficiary_list_summary_farmer.annual_income_q1} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_q1 is not None
                 else None,
-                annual_income_quartile_50=f"{beneficiary_list_summary_farmer.annual_income_quartile_50} {beneficiary_list_summary_farmer.annual_income_units}"
-                if beneficiary_list_summary_farmer.annual_income_quartile_50 is not None
+                annual_income_q2=f"{beneficiary_list_summary_farmer.annual_income_q2} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_q2 is not None
                 else None,
-                annual_income_quartile_75=f"{beneficiary_list_summary_farmer.annual_income_quartile_75} {beneficiary_list_summary_farmer.annual_income_units}"
-                if beneficiary_list_summary_farmer.annual_income_quartile_75 is not None
+                annual_income_q3=f"{beneficiary_list_summary_farmer.annual_income_q3} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_q3 is not None
                 else None,
                 average_entitlement_female=beneficiary_list_summary_farmer.average_entitlement_female,
                 average_entitlement_male=beneficiary_list_summary_farmer.average_entitlement_male,
-                entitlement_amount_75=beneficiary_list_summary_farmer.entitlement_amount_q3,
-                entitlement_amount_50=beneficiary_list_summary_farmer.entitlement_amount_q2,
-                entitlement_amount_25=beneficiary_list_summary_farmer.entitlement_amount_q1,
-                entitlement_amount_male_75=beneficiary_list_summary_farmer.entitlement_amount_male_q3,
-                entitlement_amount_male_50=beneficiary_list_summary_farmer.entitlement_amount_male_q2,
-                entitlement_amount_male_25=beneficiary_list_summary_farmer.entitlement_amount_male_q1,
-                entitlement_amount_female_75=beneficiary_list_summary_farmer.entitlement_amount_female_q3,
-                entitlement_amount_female_50=beneficiary_list_summary_farmer.entitlement_amount_female_q2,
-                entitlement_amount_female_25=beneficiary_list_summary_farmer.entitlement_amount_female_q1,
+                entitlement_amount_q3=beneficiary_list_summary_farmer.entitlement_amount_q3,
+                entitlement_amount_q2=beneficiary_list_summary_farmer.entitlement_amount_q2,
+                entitlement_amount_q1=beneficiary_list_summary_farmer.entitlement_amount_q1,
+                entitlement_amount_male_q3=beneficiary_list_summary_farmer.entitlement_amount_male_q3,
+                entitlement_amount_male_q2=beneficiary_list_summary_farmer.entitlement_amount_male_q2,
+                entitlement_amount_male_q1=beneficiary_list_summary_farmer.entitlement_amount_male_q1,
+                entitlement_amount_female_q3=beneficiary_list_summary_farmer.entitlement_amount_female_q3,
+                entitlement_amount_female_q2=beneficiary_list_summary_farmer.entitlement_amount_female_q2,
+                entitlement_amount_female_q1=beneficiary_list_summary_farmer.entitlement_amount_female_q1,
             ),
         )
 
@@ -138,38 +129,38 @@ class RegistryFarmer(RegistryInterface):
                 land_holding_mean=f"{beneficiary_list_summary_farmer.land_holding_mean} {beneficiary_list_summary_farmer.land_holding_units}"
                 if beneficiary_list_summary_farmer.land_holding_mean is not None
                 else None,
-                land_holding_quartile_75=f"{beneficiary_list_summary_farmer.land_holding_quartile_75} {beneficiary_list_summary_farmer.land_holding_units}"
-                if beneficiary_list_summary_farmer.land_holding_quartile_75 is not None
+                land_holding_q3=f"{beneficiary_list_summary_farmer.land_holding_q3} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_q3 is not None
                 else None,
-                land_holding_quartile_50=f"{beneficiary_list_summary_farmer.land_holding_quartile_50} {beneficiary_list_summary_farmer.land_holding_units}"
-                if beneficiary_list_summary_farmer.land_holding_quartile_50 is not None
+                land_holding_q2=f"{beneficiary_list_summary_farmer.land_holding_q2} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_q2 is not None
                 else None,
-                land_holding_quartile_25=f"{beneficiary_list_summary_farmer.land_holding_quartile_25} {beneficiary_list_summary_farmer.land_holding_units}"
-                if beneficiary_list_summary_farmer.land_holding_quartile_25 is not None
+                land_holding_q1=f"{beneficiary_list_summary_farmer.land_holding_q1} {beneficiary_list_summary_farmer.land_holding_units}"
+                if beneficiary_list_summary_farmer.land_holding_q1 is not None
                 else None,
                 annual_income_mean=f"{beneficiary_list_summary_farmer.annual_income_mean} {beneficiary_list_summary_farmer.annual_income_units}"
                 if beneficiary_list_summary_farmer.annual_income_mean is not None
                 else None,
-                annual_income_quartile_75=f"{beneficiary_list_summary_farmer.annual_income_quartile_75} {beneficiary_list_summary_farmer.annual_income_units}"
-                if beneficiary_list_summary_farmer.annual_income_quartile_75 is not None
+                annual_income_q3=f"{beneficiary_list_summary_farmer.annual_income_q3} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_q3 is not None
                 else None,
-                annual_income_quartile_50=f"{beneficiary_list_summary_farmer.annual_income_quartile_50} {beneficiary_list_summary_farmer.annual_income_units}"
-                if beneficiary_list_summary_farmer.annual_income_quartile_50 is not None
+                annual_income_q2=f"{beneficiary_list_summary_farmer.annual_income_q2} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_q2 is not None
                 else None,
-                annual_income_quartile_25=f"{beneficiary_list_summary_farmer.annual_income_quartile_25} {beneficiary_list_summary_farmer.annual_income_units}"
-                if beneficiary_list_summary_farmer.annual_income_quartile_25 is not None
+                annual_income_q1=f"{beneficiary_list_summary_farmer.annual_income_q1} {beneficiary_list_summary_farmer.annual_income_units}"
+                if beneficiary_list_summary_farmer.annual_income_q1 is not None
                 else None,
                 average_entitlement_female=beneficiary_list_summary_farmer.average_entitlement_female,
                 average_entitlement_male=beneficiary_list_summary_farmer.average_entitlement_male,
-                entitlement_amount_75=beneficiary_list_summary_farmer.entitlement_amount_q3,
-                entitlement_amount_50=beneficiary_list_summary_farmer.entitlement_amount_q2,
-                entitlement_amount_25=beneficiary_list_summary_farmer.entitlement_amount_q1,
-                entitlement_amount_male_75=beneficiary_list_summary_farmer.entitlement_amount_male_q3,
-                entitlement_amount_male_50=beneficiary_list_summary_farmer.entitlement_amount_male_q2,
-                entitlement_amount_male_25=beneficiary_list_summary_farmer.entitlement_amount_male_q1,
-                entitlement_amount_female_75=beneficiary_list_summary_farmer.entitlement_amount_female_q3,
-                entitlement_amount_female_50=beneficiary_list_summary_farmer.entitlement_amount_female_q2,
-                entitlement_amount_female_25=beneficiary_list_summary_farmer.entitlement_amount_female_q1,
+                entitlement_amount_q3=beneficiary_list_summary_farmer.entitlement_amount_q3,
+                entitlement_amount_q2=beneficiary_list_summary_farmer.entitlement_amount_q2,
+                entitlement_amount_q1=beneficiary_list_summary_farmer.entitlement_amount_q1,
+                entitlement_amount_male_q3=beneficiary_list_summary_farmer.entitlement_amount_male_q3,
+                entitlement_amount_male_q2=beneficiary_list_summary_farmer.entitlement_amount_male_q2,
+                entitlement_amount_male_q1=beneficiary_list_summary_farmer.entitlement_amount_male_q1,
+                entitlement_amount_female_q3=beneficiary_list_summary_farmer.entitlement_amount_female_q3,
+                entitlement_amount_female_q2=beneficiary_list_summary_farmer.entitlement_amount_female_q2,
+                entitlement_amount_female_q1=beneficiary_list_summary_farmer.entitlement_amount_female_q1,
             ),
         )
         return summary_farmer_payload
@@ -228,8 +219,11 @@ class RegistryFarmer(RegistryInterface):
                     registration_date=farmer["registration_date"],
                     name=farmer["name"],
                     land_area=farmer["land_area"],
+                    annual_income=farmer["annual_income"],
                     no_of_cattle_heads=farmer["no_of_cattle_heads"],
                     no_of_poultry_heads=farmer["no_of_poultry_heads"],
+                    large_area_code=farmer["large_area_code"],
+                    small_area_code=farmer["small_area_code"],
                 )
                 for farmer in farmer_search_results
             ]
@@ -251,7 +245,6 @@ class RegistryFarmer(RegistryInterface):
         registrant_ids: List[str],
         search_query: str,
     ) -> int:
-        print("")
         (
             beneficiary_count_query,
             beneficiary_count_params,
@@ -288,8 +281,9 @@ class RegistryFarmer(RegistryInterface):
 
         for beneficiary_list_detail in beneficiary_list_details:
             registrant_ids = []
-            for registrant in json.loads(beneficiary_list_detail.registrant_details):
-                registrant_ids.append(registrant["registrant_id"])
+            for registrant_detail in beneficiary_list_detail.registrant_details:
+                registrant_detail = RegistrantDetails(**registrant_detail)
+                registrant_ids.append(registrant_detail.registrant_id)
 
             registrants = self.get_registrants_by_ids(registrant_ids, sr_session)
             for farmer in registrants:
@@ -302,13 +296,13 @@ class RegistryFarmer(RegistryInterface):
             farmer_summary.land_holding_mean = round(
                 float(np.mean(land_areas_array)), 2
             )
-            farmer_summary.land_holding_quartile_25 = round(
+            farmer_summary.land_holding_q1 = round(
                 float(np.percentile(land_areas_array, 25, method="midpoint")), 2
             )
-            farmer_summary.land_holding_quartile_50 = round(
+            farmer_summary.land_holding_q2 = round(
                 float(np.percentile(land_areas_array, 50, method="midpoint")), 2
             )
-            farmer_summary.land_holding_quartile_75 = round(
+            farmer_summary.land_holding_q3 = round(
                 float(np.percentile(land_areas_array, 75, method="midpoint")), 2
             )
 
@@ -318,13 +312,13 @@ class RegistryFarmer(RegistryInterface):
             farmer_summary.annual_income_mean = round(
                 float(np.mean(annual_incomes_array)), 2
             )
-            farmer_summary.annual_income_quartile_25 = round(
+            farmer_summary.annual_income_q1 = round(
                 float(np.percentile(annual_incomes_array, 25, method="midpoint")), 2
             )
-            farmer_summary.annual_income_quartile_50 = round(
+            farmer_summary.annual_income_q2 = round(
                 float(np.percentile(annual_incomes_array, 50, method="midpoint")), 2
             )
-            farmer_summary.annual_income_quartile_75 = round(
+            farmer_summary.annual_income_q3 = round(
                 float(np.percentile(annual_incomes_array, 75, method="midpoint")), 2
             )
 

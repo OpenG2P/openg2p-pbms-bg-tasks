@@ -53,11 +53,6 @@ def beneficiary_list_worker(id: int):
                 .filter(G2PBeneficiaryList.id == id)
                 .first()
             )
-
-            if not beneficiary_list:
-                _logger.error(f"No entry found for beneficiary list id: {id}")
-                return
-
             g2p_program_definition = (
                 pbms_session.query(G2PProgramDefinition)
                 .filter(G2PProgramDefinition.id == beneficiary_list.program_id)
@@ -70,12 +65,10 @@ def beneficiary_list_worker(id: int):
                 constructed_query = construct_enrollment_sql_query(
                     pbms_session, beneficiary_list
                 )
-
             elif beneficiary_list.list_stage == ListStageEnum.DISBURSEMENT.value:
                 constructed_query = construct_disbursement_sql_query(
                     pbms_session, bg_task_session, beneficiary_list
                 )
-
             else:
                 _logger.error(
                     f"Invalid list stage {beneficiary_list.list_stage} for beneficiary list id {id}"
@@ -107,11 +100,11 @@ def beneficiary_list_worker(id: int):
                 beneficiary_list_details.append(
                     BeneficiaryListDetails(
                         beneficiary_list_id=beneficiary_list.beneficiary_list_id,
-                        registrant_details=json.dumps(registrant_details),
-                        entitlement_process_status=StatusEnum.PENDING.value
+                        registrant_details=registrant_details,
+                        entitlement_process_status=StatusEnum.pending.value
                         if beneficiary_list.list_stage
                         == ListStageEnum.DISBURSEMENT.value
-                        else StatusEnum.NOT_APPLICABLE.value,
+                        else StatusEnum.not_applicable.value,
                         number_of_registrants=number_of_registrants_for_batch,
                     )
                 )
@@ -157,22 +150,20 @@ def beneficiary_list_worker(id: int):
                 )
 
             except ValueError as e:
-                _logger.error(
+                raise Exception(
                     f"Invalid registrant type for program_id {beneficiary_list.program_id}: {e}"
-                )
-                return
+                ) from e
 
             except Exception as e:
-                _logger.error(
+                raise Exception(
                     f"Error computing summary statistics for beneficiary list id {id}: {e}"
-                )
-                return
+                ) from e
 
             # Update beneficiary list entry status
-            beneficiary_list.eligibility_process_status = StatusEnum.COMPLETE.value
+            beneficiary_list.eligibility_process_status = StatusEnum.complete.value
 
             if beneficiary_list.list_stage == ListStageEnum.DISBURSEMENT.value:
-                beneficiary_list.entitlement_process_status = StatusEnum.PENDING.value
+                beneficiary_list.entitlement_process_status = StatusEnum.pending.value
 
             beneficiary_list.processed_date = datetime.now(timezone.utc)
 
@@ -180,26 +171,29 @@ def beneficiary_list_worker(id: int):
             pbms_session.commit()
 
         except Exception as e:
-            error_message = f"Error during processing eligibility request for beneficiary list id {id}: {str(e)}"
-            _logger.error(error_message)
+            _logger.error(
+                "Error during processing eligibility request for beneficiary list id {}: {}".format(
+                    id, str(e)
+                )
+            )
             # Rollback all sessions
             pbms_session.rollback()
             bg_task_session.rollback()
 
-            if beneficiary_list:
-                beneficiary_list.eligibility_number_of_attempts += 1
-                beneficiary_list.eligibility_processed_date = datetime.now(timezone.utc)
-                beneficiary_list.eligibility_process_status = (
-                    StatusEnum.PENDING.value
-                    if beneficiary_list.eligibility_number_of_attempts
-                    < _config.worker_max_attempts
-                    else StatusEnum.FAILED.value
-                )
-                beneficiary_list.eligibility_latest_error_code = str(e)
-                pbms_session.commit()
+            beneficiary_list.eligibility_number_of_attempts += 1
+            beneficiary_list.eligibility_processed_date = datetime.now(timezone.utc)
+            beneficiary_list.eligibility_process_status = (
+                StatusEnum.pending.value
+                if beneficiary_list.eligibility_number_of_attempts
+                < _config.worker_max_attempts
+                else StatusEnum.failed.value
+            )
+            beneficiary_list.eligibility_latest_error_code = str(e)
+            pbms_session.commit()
+            raise e
 
         _logger.info(
-            f"Completed processing eligibility request for beneficiary list id: {id}"
+            "Completed processing eligibility request for beneficiary list id: %s" % id
         )
 
 
@@ -228,8 +222,12 @@ def construct_disbursement_sql_query(pbms_session, bg_task_session, beneficiary_
             == ListWorkflowStatusEnum.APPROVED_FINAL_ENROLMENT.value,
         )
         .order_by(G2PBeneficiaryList.creation_date.desc())
-        .scalar()
+        .first()
     )
+    if latest_approved_final_enrollment_beneficiary_list_id:
+        latest_approved_final_enrollment_beneficiary_list_id = (
+            latest_approved_final_enrollment_beneficiary_list_id[0]
+        )
 
     # Get the registrant_details field from beneficiary_list_details for the latest approved final enrollment
     registrant_details_list = None

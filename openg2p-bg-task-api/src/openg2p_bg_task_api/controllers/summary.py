@@ -42,6 +42,7 @@ class SummaryController(BaseController):
                 )
             )
             _logger.info("Eligibility summary retrieved successfully")
+            _logger.debug("Summary Response: %s", summary_response)
             return summary_response
 
         except BGTaskException as e:

@@ -21,15 +21,15 @@ def beneficiary_list_beat_producer():
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
     )
     with pbms_session_maker() as pbms_session:
-        # Fetch rows with PENDING status
+        # Fetch rows with pending status
         beneficiary_lists: List[G2PBeneficiaryList] = (
             pbms_session.execute(
                 select(G2PBeneficiaryList)
                 .filter(
                     G2PBeneficiaryList.eligibility_process_status
-                    == StatusEnum.PENDING.value
+                    == StatusEnum.pending.value
                 )
-                .limit(_config.batch_size)
+                .limit(_config.no_of_tasks_to_process)
             )
             .scalars()
             .all()
@@ -39,11 +39,11 @@ def beneficiary_list_beat_producer():
         for beneficiary_list in beneficiary_lists:
             _logger.info(f"Queueing beneficiary list id: {beneficiary_list.id}")
 
-            beneficiary_list.eligibility_process_status = StatusEnum.PROCESSING.value
+            beneficiary_list.eligibility_process_status = StatusEnum.processing.value
             pbms_session.add(beneficiary_list)
 
             _logger.info(
-                f"Updating status for {WorkerTypes.BENEFICIARY_LIST_WORKER} to PROCESSING in beneficiary list id: {beneficiary_list.id}"
+                f"Updating status for {WorkerTypes.BENEFICIARY_LIST_WORKER} to processing in beneficiary list id: {beneficiary_list.id}"
             )
 
             # Send task to appropriate celery worker

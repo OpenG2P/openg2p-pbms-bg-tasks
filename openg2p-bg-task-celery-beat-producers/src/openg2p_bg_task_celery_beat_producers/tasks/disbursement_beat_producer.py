@@ -27,9 +27,10 @@ def disbursement_beat_producer():
             bg_task_session.execute(
                 select(DisbursementBatch)
                 .filter(
-                    DisbursementBatch.disbursement_status == StatusEnum.PENDING.value
+                    DisbursementBatch.disbursement_status == StatusEnum.pending.value
                 )
-                .limit(_config.batch_size)
+                .order_by(DisbursementBatch.id)
+                .limit(_config.no_of_tasks_to_process)
             )
             .scalars()
             .all()
@@ -41,10 +42,10 @@ def disbursement_beat_producer():
         for disbursement_batch in disbursement_batches:
             _logger.info(f"Queueing Disbursement Batch ID: {disbursement_batch.id}")
 
-            # Update the status to PROCESSING
-            disbursement_batch.disbursement_status = StatusEnum.PROCESSING.value
+            # Update the status to processing
+            disbursement_batch.disbursement_status = StatusEnum.processing.value
             _logger.info(
-                f"Updating status for Disbursement Batch ID: {disbursement_batch.id} to PROCESSING"
+                f"Updating status for Disbursement Batch ID: {disbursement_batch.id} to processing"
             )
             bg_task_session.commit()
             worker_type = WorkerTypes.DISBURSEMENT_WORKER

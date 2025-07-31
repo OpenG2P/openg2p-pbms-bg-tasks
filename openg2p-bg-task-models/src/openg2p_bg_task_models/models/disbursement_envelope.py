@@ -9,7 +9,8 @@ from sqlalchemy.orm import mapped_column
 class BenefitType(enum.Enum):
     COMMODITY = "COMMODITY"
     SERVICE = "SERVICE"
-    CASH = "CASH"  # CASH_DIGITAL, CASH_PHYSICAL
+    CASH_DIGITAL = "CASH_DIGITAL"
+    CASH_PHYSICAL = "CASH_PHYSICAL"
     COMBINATION = "COMBINATION"
 
 
@@ -27,8 +28,9 @@ class DisbursementEnvelope(BaseORMModel):
     beneficiary_list_id = mapped_column(String, nullable=False, index=True)
     benefit_code_id = mapped_column(Integer, nullable=False, index=True)
     benefit_type = mapped_column(SqlEnum(BenefitType), nullable=False)
+    benefit_program_id = mapped_column(Integer, nullable=False, index=True)
     benefit_program_mnemonic = mapped_column(String, nullable=False)
-    disbursement_cycle_id = mapped_column(String, nullable=False)
+    disbursement_cycle_id = mapped_column(Integer, nullable=False)
     cycle_code_mnemonic = mapped_column(String, nullable=False)
     number_of_beneficiaries = mapped_column(Integer, nullable=False)
     number_of_disbursements = mapped_column(Integer, nullable=False)

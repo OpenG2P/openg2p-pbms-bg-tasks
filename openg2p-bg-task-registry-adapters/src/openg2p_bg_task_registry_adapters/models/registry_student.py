@@ -1,5 +1,5 @@
 from openg2p_pbms_models.models import G2PRegistry
-from sqlalchemy import Date, String
+from sqlalchemy import Date, Integer, String
 from sqlalchemy.orm import mapped_column
 
 
@@ -10,3 +10,7 @@ class G2PStudentRegistry(G2PRegistry):
     gender = mapped_column(String, nullable=True)  # 'male' or 'female'
     institution_name = mapped_column(String, nullable=True)
     date_of_birth = mapped_column(Date, nullable=True)
+    large_area_id = mapped_column(Integer, nullable=True)
+    large_area_code = mapped_column(String, nullable=True)
+    small_area_id = mapped_column(Integer, nullable=True)
+    small_area_code = mapped_column(String, nullable=True)

@@ -44,7 +44,9 @@ class BeneficiarySearchController(BaseController):
                 beneficiary_search_request, beneficiary_search_response_payload
             )
             _logger.info("Beneficiaries retrieved successfully")
-            _logger.info("Beneficiary Search Response: %s", beneficiary_search_response)
+            _logger.debug(
+                "Beneficiary Search Response: %s", beneficiary_search_response
+            )
             return beneficiary_search_response
 
         except BGTaskException as e:
