@@ -34,4 +34,4 @@ USER ${container_user}
 
 ENV BG_TASK_CELERY_WORKERS_COUNT=4
 
-CMD celery -A main.celery_app worker -Q bg_task_request_queue --loglevel=info --concurrency=${BG_TASK_CELERY_WORKERS_COUNT}
+CMD celery -A main.celery_app worker -Q bg_task_worker_queue --loglevel=info --concurrency=${BG_TASK_CELERY_WORKERS_COUNT}
