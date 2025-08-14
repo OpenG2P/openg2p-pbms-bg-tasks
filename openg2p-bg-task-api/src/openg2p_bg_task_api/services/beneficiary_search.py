@@ -55,7 +55,8 @@ class BeneficiarySearchService(BaseService):
                 return beneficiary_search_response_payload
 
             except Exception as e:
-                _logger.error(f"Error fetching beneficiary list summary : {e}")
+                _logger.exception("Error searching for beneficiaries.")
+                raise e
 
     async def construct_beneficiary_search_success_response(
         self,
