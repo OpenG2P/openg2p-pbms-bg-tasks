@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_backend_url: str = "redis://localhost:6379/0"
 
-    g2p_bridge_base_url: str = "http://g2p_bridge_base_url"
+    g2p_bridge_base_url: str = "http://g2pbridge-api"
 
     batch_size: int = 2000
     worker_max_attempts: int = 5
@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     keymanager_api_timeout: int = 10
     keymanager_api_base_url: str = ""
     keymanager_auth_enabled: bool = True
+
+    # TODO: auth -> oauth, remove 'keymanager'
     keymanager_auth_url: str = ""
     keymanager_auth_client_id: str = "openg2p-pbms"
     keymanager_auth_client_secret: str = ""
