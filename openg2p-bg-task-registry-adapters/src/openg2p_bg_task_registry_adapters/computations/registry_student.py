@@ -213,7 +213,6 @@ class RegistryStudent(RegistryInterface):
                 G2PStudentRegistryPayload(
                     id=student["id"],
                     unique_id=student["unique_id"],
-                    registration_date=student["registration_date"],
                     name=student["name"],
                     institution_name=student["institution_name"],
                     date_of_birth=student["date_of_birth"],

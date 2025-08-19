@@ -216,7 +216,6 @@ class RegistryFarmer(RegistryInterface):
                 G2PFarmerRegistryPayload(
                     id=farmer["id"],
                     unique_id=farmer["unique_id"],
-                    registration_date=farmer["registration_date"],
                     name=farmer["name"],
                     land_area=farmer["land_area"],
                     annual_income=farmer["annual_income"],
