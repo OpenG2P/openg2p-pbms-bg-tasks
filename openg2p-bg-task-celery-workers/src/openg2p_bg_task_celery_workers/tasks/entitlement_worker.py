@@ -97,6 +97,7 @@ def entitlement_worker(id: str):
                         == max_quantity
                     ):
                         continue
+                    
                     else:
                         try:
                             registry_interface: RegistryInterface = (
@@ -111,6 +112,7 @@ def entitlement_worker(id: str):
                                     sr_session,
                                 )
                             )
+                            calculate_entitlement = 0
                             if is_registrant_entitled:
                                 calculated_entitlement = calculate_entitlement(
                                     sr_session,
@@ -121,12 +123,12 @@ def entitlement_worker(id: str):
                                 _logger.debug(
                                     f"Calculated entitlement: {calculated_entitlement}"
                                 )
-                                update_registrant_detail_json(
-                                    registrant_detail,
-                                    benefit_code_id,
-                                    max_quantity,
-                                    calculated_entitlement,
-                                )
+                            update_registrant_detail_json(
+                                registrant_detail,
+                                benefit_code_id,
+                                max_quantity,
+                                calculated_entitlement,
+                            )
 
                         except Exception as e:
                             raise Exception(
