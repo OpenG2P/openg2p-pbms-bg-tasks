@@ -264,7 +264,6 @@ class RegistryWorker(RegistryInterface):
                 registrant = registrant_map_from_registry.get(
                     str(registrant_detail_obj.registrant_id)
                 )
-                gender = registrant.gender if registrant else None
 
                 for benefit_code_id, value in registrant_detail_obj.entitlement.items():
                     entitlements.setdefault(benefit_code_id, []).append(value)
