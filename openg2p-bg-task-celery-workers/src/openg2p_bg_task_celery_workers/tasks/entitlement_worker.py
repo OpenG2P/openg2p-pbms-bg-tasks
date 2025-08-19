@@ -100,7 +100,9 @@ def entitlement_worker(id: str):
                     else:
                         try:
                             registry_interface: RegistryInterface = (
-                                RegistryFactory.get_registry_class(target_registry)
+                                RegistryFactory.get_registry_class(
+                                    entitlement_rule_definition.target_registry
+                                )
                             )
                             is_registrant_entitled: bool = (
                                 registry_interface.get_is_registant_entitled(
