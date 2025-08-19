@@ -6,8 +6,6 @@ from sqlalchemy.orm import mapped_column
 class G2PWorkerRegistry(G2PRegistry):
     __tablename__ = "g2p_worker_registry"
 
-    unique_id = mapped_column(Integer, nullable=True)
-
     name = mapped_column(String, nullable=False)
     email = mapped_column(String, nullable=False)
     phone = mapped_column(String, nullable=False)
