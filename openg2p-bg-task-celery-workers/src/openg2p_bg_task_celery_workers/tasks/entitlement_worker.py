@@ -112,7 +112,7 @@ def entitlement_worker(id: str):
                                     sr_session,
                                 )
                             )
-                            calculate_entitlement = 0
+                            calculated_entitlement = 0
                             if is_registrant_entitled:
                                 calculated_entitlement = calculate_entitlement(
                                     sr_session,
