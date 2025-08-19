@@ -4,9 +4,6 @@ import logging
 
 from openg2p_bg_task_models.models import (
     BeneficiaryListDetails,
-    BeneficiaryListSummary,
-    DisbursementBatch,
-    DisbursementEnvelope,
 )
 from openg2p_bg_task_registry_adapters.cache import init_cache
 from openg2p_fastapi_common.app import Initializer as BaseInitializer
@@ -54,9 +51,6 @@ class Initializer(BaseInitializer):
 
         async def migrate():
             _logger.info("Migrating database")
-            await DisbursementBatch.create_migrate()
-            await DisbursementEnvelope.create_migrate()
             await BeneficiaryListDetails.create_migrate()
-            await BeneficiaryListSummary.create_migrate()
 
         asyncio.run(migrate())

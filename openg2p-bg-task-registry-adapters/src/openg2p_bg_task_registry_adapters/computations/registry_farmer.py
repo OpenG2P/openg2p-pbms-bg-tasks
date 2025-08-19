@@ -327,11 +327,11 @@ class RegistryFarmer(RegistryInterface):
     def get_registrants_by_ids(
         self, registrant_ids, sr_session
     ) -> List[G2PFarmerRegistry]:
-        return (
-            sr_session.query(G2PFarmerRegistry)
-            .filter(G2PFarmerRegistry.unique_id.in_(registrant_ids))
-            .all()
+        farmers = sr_session.query(G2PFarmerRegistry).filter(
+            G2PFarmerRegistry.unique_id.in_(registrant_ids)
         )
+
+        return list(farmers.yield_per(500))
 
     # =================================
     # Entitlement Celery Worker Methods

@@ -1,3 +1,6 @@
+import asyncio
+import json
+
 import requests
 from openg2p_bg_task_models.schemas import Disbursement
 from openg2p_g2p_bridge_models.schemas import (
@@ -27,7 +30,7 @@ class G2PBridgeDisbursementHelper:
             message_id="string",
             message_ts="string",
             action="create_disbursement_envelopes",
-            sender_id=self._config.sender_id,
+            sender_id=self._config.sign_key_keymanager_app_id,
             sender_uri="",
             receiver_id="",
             total_count=1,
@@ -50,8 +53,15 @@ class G2PBridgeDisbursementHelper:
         )
         self._logger.info(f"Envelope Creation URL: {envelope_creation_url}")
 
-        jwt_token = self.keymanager_helper.create_jwt_token(
-            disbursement_envelope_request_json, self._config.private_key
+        jwt_token = asyncio.run(
+            self.keymanager_helper.create_jwt_token(
+                json.dumps(
+                    disbursement_envelope_request_json,
+                    indent=None,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ),
+            )
         )
 
         headers = {
@@ -107,7 +117,7 @@ class G2PBridgeDisbursementHelper:
             message_id="string",
             message_ts="string",
             action="create_disbursements",
-            sender_id=self._config.sender_id,
+            sender_id=self._config.sign_key_keymanager_app_id,
             sender_uri="",
             receiver_id="",
             total_count=len(disbursement_payloads),
@@ -126,8 +136,15 @@ class G2PBridgeDisbursementHelper:
         disbursement_url = self._config.g2p_bridge_base_url + "/create_disbursements"
         self._logger.info(f"Disbursement URL: {disbursement_url}")
 
-        jwt_token = self.keymanager_helper.create_jwt_token(
-            disbursement_request_json, self._config.private_key
+        jwt_token = asyncio.run(
+            self.keymanager_helper.create_jwt_token(
+                json.dumps(
+                    disbursement_request_json,
+                    indent=None,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
+            )
         )
 
         headers = {
