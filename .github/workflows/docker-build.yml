@@ -23,7 +23,6 @@ jobs:
           for changed_file in ${{ steps.files.outputs.all }}; do
             if [[ ${changed_file} =~ ^openg2p-pbms-models || \
                   ${changed_file} =~ ^openg2p-bg-task-models || \
-                  ${changed_file} =~ ^openg2p-bg-task-registry-adapters || \
                   ${changed_file} =~ ^openg2p-bg-task-api || \
                   ${changed_file} == Dockerfile.api || \
                   ${changed_file} == *.dockerignore ]]
@@ -56,7 +55,6 @@ jobs:
           for changed_file in ${{ steps.files.outputs.all }}; do
             if [[ ${changed_file} =~ ^openg2p-pbms-models || \
                   ${changed_file} =~ ^openg2p-bg-task-models || \
-                  ${changed_file} =~ ^openg2p-bg-task-registry-adapters || \
                   ${changed_file} =~ ^openg2p-bg-task-celery-beat-producers || \
                   ${changed_file} == Dockerfile.producers || \
                   ${changed_file} == *.dockerignore ]]
@@ -89,7 +87,6 @@ jobs:
           for changed_file in ${{ steps.files.outputs.all }}; do
             if [[ ${changed_file} =~ ^openg2p-pbms-models || \
                   ${changed_file} =~ ^openg2p-bg-task-models || \
-                  ${changed_file} =~ ^openg2p-bg-task-registry-adapters || \
                   ${changed_file} =~ ^openg2p-bg-task-celery-workers || \
                   ${changed_file} == Dockerfile.workers || \
                   ${changed_file} == *.dockerignore ]]
