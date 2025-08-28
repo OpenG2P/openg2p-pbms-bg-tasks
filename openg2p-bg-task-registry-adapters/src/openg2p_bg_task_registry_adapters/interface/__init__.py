@@ -1,1 +1,0 @@
-from .registry_interface import RegistryInterface

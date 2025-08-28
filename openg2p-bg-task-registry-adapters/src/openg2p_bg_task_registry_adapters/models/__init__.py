@@ -1,5 +1,0 @@
-from .beneficiary_list_summary_farmer import BeneficiaryListSummaryFarmer
-from .beneficiary_list_summary_student import BeneficiaryListSummaryStudent
-from .registry_farmer import G2PFarmerRegistry
-from .registry_student import G2PStudentRegistry
-from .registry_type import G2PRegistryType
