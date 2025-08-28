@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sqlalchemy import Date, Integer, String
+from sqlalchemy import Integer, String
 from sqlalchemy.orm import mapped_column
 
 from .base import BaseORMModel

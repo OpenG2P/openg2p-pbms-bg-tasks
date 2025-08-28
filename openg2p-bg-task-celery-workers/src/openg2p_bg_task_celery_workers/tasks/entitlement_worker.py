@@ -97,7 +97,7 @@ def entitlement_worker(id: str):
                         == max_quantity
                     ):
                         continue
-                    
+
                     else:
                         try:
                             registry_interface: RegistryInterface = (
