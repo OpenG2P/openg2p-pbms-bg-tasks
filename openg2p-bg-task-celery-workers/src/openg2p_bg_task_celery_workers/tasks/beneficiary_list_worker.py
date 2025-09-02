@@ -198,17 +198,14 @@ def beneficiary_list_worker(id: int):
 
 
 def construct_enrollment_sql_query(pbms_session, beneficiary_list):
-    sql_queries_and_set_operators = (
-        pbms_session.execute(
-            select(
-                G2PEligibilityRuleDefinition.sql_query,
-                G2PEligibilityRuleDefinition.set_operator
-            )
-            .where(G2PEligibilityRuleDefinition.program_id == beneficiary_list.program_id)
-            .order_by(G2PEligibilityRuleDefinition.rule_number.asc())
+    sql_queries_and_set_operators = pbms_session.execute(
+        select(
+            G2PEligibilityRuleDefinition.sql_query,
+            G2PEligibilityRuleDefinition.set_operator,
         )
-        .all()
-    )
+        .where(G2PEligibilityRuleDefinition.program_id == beneficiary_list.program_id)
+        .order_by(G2PEligibilityRuleDefinition.rule_number.asc())
+    ).all()
 
     return construct_eligibility_query(sql_queries_and_set_operators)
 

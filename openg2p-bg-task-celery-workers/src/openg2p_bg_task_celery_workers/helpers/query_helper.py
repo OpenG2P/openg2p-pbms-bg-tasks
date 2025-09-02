@@ -8,13 +8,17 @@ _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
 
 
-def construct_eligibility_query(sql_queries_and_set_operators: list[tuple]) -> TextClause:
+def construct_eligibility_query(
+    sql_queries_and_set_operators: list[tuple],
+) -> TextClause:
     """
     Convert list of (SQL query, set operation) tuples
     into a single SQL query using the set operations
     """
     try:
-        if not sql_queries_and_set_operators or not isinstance(sql_queries_and_set_operators, list):
+        if not sql_queries_and_set_operators or not isinstance(
+            sql_queries_and_set_operators, list
+        ):
             return None
 
         query_parts = []
@@ -29,9 +33,7 @@ def construct_eligibility_query(sql_queries_and_set_operators: list[tuple]) -> T
 
         final_query = " ".join(query_parts)
 
-        _logger.debug(
-            "Constructed eligibility query: %s", final_query
-        )
+        _logger.debug("Constructed eligibility query: %s", final_query)
         return text(final_query)
     except Exception as _:
         return None
