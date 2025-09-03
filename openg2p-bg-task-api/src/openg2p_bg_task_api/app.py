@@ -55,8 +55,9 @@ class Initializer(BaseInitializer):
         async def migrate():
             _logger.info("Migrating database")
             await BeneficiaryListDetails.create_migrate()
-            await BeneficiaryListSummaryFamilies.create_migrate()
             await DisbursementBatch.create_migrate()
             await DisbursementEnvelope.create_migrate()
+
+            await BeneficiaryListSummaryFamilies.create_migrate()
 
         asyncio.run(migrate())
