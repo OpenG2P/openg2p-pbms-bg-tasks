@@ -12,6 +12,7 @@ class G2PEntitlementRuleDefinition(BaseORMModel):
     benefit_code_id = mapped_column(
         Integer, ForeignKey("g2p_benefit_codes.id"), nullable=True
     )
+    target_registry = mapped_column(String, nullable=False)
     create_uid = mapped_column(Integer, nullable=True)
     write_uid = mapped_column(Integer, nullable=True)
     mnemonic = mapped_column(String, nullable=False, unique=True)

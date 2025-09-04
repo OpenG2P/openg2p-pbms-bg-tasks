@@ -14,6 +14,8 @@ class G2PEligibilityRuleDefinition(BaseORMModel):
     create_uid = mapped_column(Integer, nullable=True)
     write_uid = mapped_column(Integer, nullable=True)
     mnemonic = mapped_column(String, nullable=False, unique=True)
+    rule_number = mapped_column(Integer, nullable=False)
+    set_operator = mapped_column(String, nullable=True)
     description = mapped_column(String, nullable=True)
     target_registry = mapped_column(String, nullable=False)
     pbms_domain = mapped_column(String, nullable=False)
