@@ -8,18 +8,33 @@ _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
 
 
-def construct_eligibility_query(sql_queries: list) -> TextClause:
-    """Convert list of SQL queries into a single SQL query using INTERSECT"""
+def construct_eligibility_query(
+    sql_queries_and_set_operators: list[tuple],
+) -> TextClause:
+    """
+    Convert list of (SQL query, set operation) tuples
+    into a single SQL query using the set operations
+    """
     try:
-        if not sql_queries or not isinstance(sql_queries, list):
+        if not sql_queries_and_set_operators or not isinstance(
+            sql_queries_and_set_operators, list
+        ):
             return None
 
-        intersect_query = " INTERSECT ".join(sql_queries)
+        query_parts = []
+        for idx, (sql, set_op) in enumerate(sql_queries_and_set_operators):
+            if not sql:
+                continue
+            if idx == 0:
+                query_parts.append(sql)
+            else:
+                op = set_op if (set_op and set_op != "NONE") else "UNION"
+                query_parts.append(f"{op} {sql}")
 
-        _logger.debug(
-            "Constructed intersect query for eligibility: %s", intersect_query
-        )
-        return text(intersect_query)
+        final_query = " ".join(query_parts)
+
+        _logger.debug("Constructed eligibility query: %s", final_query)
+        return text(final_query)
     except Exception as _:
         return None
 
