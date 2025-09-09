@@ -26,7 +26,7 @@ def construct_narrative(disbursement_cycle_mnemonic: str, program_mnemonic: str)
 
 @celery_app.task(name="disbursement_worker")
 def disbursement_worker(id: str):
-    _logger.info("Starting disbursement batch worker")
+    _logger.info("Starting disbursement request for disbursement batch id: %s", id)
     bg_task_session_maker = sessionmaker(
         bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )

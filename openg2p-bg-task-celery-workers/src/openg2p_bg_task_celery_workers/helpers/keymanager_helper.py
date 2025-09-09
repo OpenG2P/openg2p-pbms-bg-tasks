@@ -39,6 +39,9 @@ class KeymanagerHelper:
 
         cookies = {}
         if getattr(self._config, "keymanager_auth_enabled", False):
+            self._logger.debug(
+                "Setting Authorization Cookie from Keymananger Auth Service"
+            )
             cookies["Authorization"] = await self.get_keymanager_auth_token()
         current_time = self.get_current_isotimestamp()
         async with httpx.AsyncClient() as client:

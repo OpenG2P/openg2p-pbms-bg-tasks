@@ -20,7 +20,10 @@ _engine = get_engine()
 
 @celery_app.task(name="entitlement_summary_worker")
 def entitlement_summary_worker(id: int):
-    _logger.info("Starting entitlement list generation")
+    _logger.info(
+        "Starting entitlement summary generation request for beneficiary list id: %s",
+        id,
+    )
     bg_task_session_maker = sessionmaker(
         bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )

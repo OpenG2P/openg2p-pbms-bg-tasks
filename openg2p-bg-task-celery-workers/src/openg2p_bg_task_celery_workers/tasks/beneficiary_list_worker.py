@@ -33,7 +33,7 @@ _engine = get_engine()
 
 @celery_app.task(name="beneficiary_list_worker")
 def beneficiary_list_worker(id: int):
-    _logger.info("Starting eligibility list generation")
+    _logger.info("Starting eligibility list generation for beneficiary list id: %s", id)
     bg_task_session_maker = sessionmaker(
         bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )
@@ -62,10 +62,17 @@ def beneficiary_list_worker(id: int):
             constructed_query = None
 
             if beneficiary_list.list_stage == ListStageEnum.ENROLLMENT.value:
+                _logger.info(
+                    "Constructing enrollment sql query for beneficiary list id: %s", id
+                )
                 constructed_query = construct_enrollment_sql_query(
                     pbms_session, beneficiary_list
                 )
             elif beneficiary_list.list_stage == ListStageEnum.DISBURSEMENT.value:
+                _logger.info(
+                    "Constructing disbursement sql query for beneficiary list id: %s",
+                    id,
+                )
                 constructed_query = construct_disbursement_sql_query(
                     pbms_session, bg_task_session, beneficiary_list
                 )
@@ -112,13 +119,13 @@ def beneficiary_list_worker(id: int):
                 f"Count of registrant IDs for beneficiary list id {id} are: {total_number_of_registrants}"
             )
             beneficiary_list.number_of_registrants = total_number_of_registrants
+
             _logger.info(f"Adding eligibility details for beneficiary list id: {id}")
             bg_task_session.add_all(beneficiary_list_details)
 
             _logger.info(
                 f"Computing and adding summary statistics for beneficiary list id: {id}"
             )
-
             # Create base summary object
             base_summary = BeneficiaryListSummary(
                 program_id=beneficiary_list.program_id,
