@@ -59,6 +59,8 @@ class G2PProgramDefinition(BaseORMModel):
     # entitlement_rule_ids = mapped_column(JSON, nullable=True)
 
     show_label_for_beneficiary_list = mapped_column(Boolean, default=False)
+    verifications_for_enrolment = mapped_column(Integer, nullable=True)
+    verifications_for_disbursement = mapped_column(Integer, nullable=True)
 
     label_for_beneficiary_list_id = mapped_column(
         Integer, ForeignKey("g2p_beneficiary_list.id"), nullable=True
