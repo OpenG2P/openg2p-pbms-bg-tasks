@@ -44,14 +44,14 @@ class G2PBridgeDisbursementHelper:
         disbursement_envelope_request_json = disbursement_envelope_request.model_dump(
             mode="json"
         )
-        self._logger.info(
+        self._logger.debug(
             f"Disbursement Envelope Request: {disbursement_envelope_request_json}"
         )
 
         envelope_creation_url = (
             self._config.g2p_bridge_base_url + "/create_disbursement_envelopes"
         )
-        self._logger.info(f"Envelope Creation URL: {envelope_creation_url}")
+        self._logger.debug(f"Envelope Creation URL: {envelope_creation_url}")
 
         jwt_token = asyncio.run(
             self.keymanager_helper.create_jwt_token(
@@ -69,17 +69,24 @@ class G2PBridgeDisbursementHelper:
             "Content-Type": "application/json",
             "Signature": jwt_token,
         }
+
+        self._logger.info("Calling disbursement envelope creation endpoint")
         try:
             response = requests.post(
                 envelope_creation_url,
                 json=disbursement_envelope_request_json,
                 headers=headers,
             )
-            self._logger.info(f"Response: {response.json()}")
             response.raise_for_status()
+            self._logger.info(
+                f"Response status code for disbursement envelope request: {response.status_code}"
+            )
 
             disbursement_envelope_response = (
                 DisbursementEnvelopeResponse.model_validate(response.json())
+            )
+            self._logger.debug(
+                f"Disbursement Envelope Response: {disbursement_envelope_response}"
             )
 
             return disbursement_envelope_response, None
@@ -134,7 +141,7 @@ class G2PBridgeDisbursementHelper:
         self._logger.debug(f"Disbursement request payload: {disbursement_request_json}")
 
         disbursement_url = self._config.g2p_bridge_base_url + "/create_disbursements"
-        self._logger.info(f"Disbursement URL: {disbursement_url}")
+        self._logger.debug(f"Disbursement URL: {disbursement_url}")
 
         jwt_token = asyncio.run(
             self.keymanager_helper.create_jwt_token(

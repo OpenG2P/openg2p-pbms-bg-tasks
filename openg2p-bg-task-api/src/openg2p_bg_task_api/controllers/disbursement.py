@@ -81,7 +81,9 @@ class DisbursementController(BaseController):
                 disbursement_batch_request, disbursement_batch_response_payload
             )
             _logger.info("Disbursement Batches retrived successfully")
-            _logger.info("Disbursement Batch response: %s", disbursement_batch_response)
+            _logger.debug(
+                "Disbursement Batch response: %s", disbursement_batch_response
+            )
             return disbursement_batch_response
 
         except BGTaskException as e:

@@ -25,7 +25,7 @@ _engine = get_engine()
 
 @celery_app.task(name="entitlement_worker")
 def entitlement_worker(id: str):
-    _logger.info("Starting entitlement list generation")
+    _logger.info("Starting entitlement request for beneficiary list details id: %s", id)
     bg_task_session_maker = sessionmaker(
         bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
     )
@@ -73,6 +73,10 @@ def entitlement_worker(id: str):
 
             for registrant_detail in beneficiary_list_details.registrant_details:
                 registrant_detail = RegistrantDetails(**registrant_detail)
+                _logger.debug(
+                    "Calculating entitlement(s) for registrant id: %s",
+                    registrant_detail.registrant_id,
+                )
 
                 for entitlement_rule_definition in entitlement_rule_definitions:
                     benefit_code_id = entitlement_rule_definition.benefit_code_id
@@ -121,7 +125,9 @@ def entitlement_worker(id: str):
                                     registry_interface,
                                 )
                                 _logger.debug(
-                                    f"Calculated entitlement: {calculated_entitlement}"
+                                    "Calculated entitlement for registrant id %s: %s",
+                                    registrant_detail.registrant_id,
+                                    calculated_entitlement,
                                 )
                             update_registrant_detail_json(
                                 registrant_detail,
@@ -132,7 +138,7 @@ def entitlement_worker(id: str):
 
                         except Exception as e:
                             raise Exception(
-                                f"Error processing entitlement rule id {entitlement_rule_definition.id} for registrant id in request beneficiary list id {id}: {e}"
+                                f"Error processing entitlement rule id {entitlement_rule_definition.id} for registrant id {registrant_detail.registrant_id} in request beneficiary list id {id}: {e}"
                             ) from e
 
                 registrant_details.append(registrant_detail)
@@ -141,6 +147,9 @@ def entitlement_worker(id: str):
                     f"Entitlement processed for registrant_id {registrant_detail.registrant_id}: {registrant_detail}"
                 )
 
+            _logger.info(
+                "Updating beneficiary list details with calculated entitlements"
+            )
             beneficiary_list_details.registrant_details = [
                 registrant_detail.model_dump(mode="json")
                 for registrant_detail in registrant_details

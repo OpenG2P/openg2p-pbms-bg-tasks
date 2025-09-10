@@ -31,7 +31,8 @@ _engine = get_engine()
 @celery_app.task(name="disbursement_envelope_creation_worker")
 def disbursement_envelope_creation_worker(id: int):
     _logger.info(
-        f"Starting disbursement envelope creation request for beneficiary list id: {id}"
+        "Starting disbursement envelope creation request for beneficiary list id: %s",
+        id,
     )
     pbms_session_maker = sessionmaker(
         bind=_engine.get("db_engine_pbms"), expire_on_commit=False
@@ -78,6 +79,9 @@ def disbursement_envelope_creation_worker(id: int):
                     registry_interface.get_summary_sync(
                         beneficiary_list.beneficiary_list_id, bg_task_session
                     )
+                )
+                _logger.debug(
+                    "Fetched summary for beneficiary_list_id: %s", summary_payload
                 )
             except Exception as e:
                 raise Exception(

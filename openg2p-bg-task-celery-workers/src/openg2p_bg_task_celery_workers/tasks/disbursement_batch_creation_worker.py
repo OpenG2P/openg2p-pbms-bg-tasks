@@ -26,7 +26,7 @@ _engine = get_engine()
 @celery_app.task(name="disbursement_batch_creation_worker")
 def disbursement_batch_creation_worker(id: int):
     _logger.info(
-        f"Starting disbursement batch creation request for benefiicary list id: {id}"
+        "Starting disbursement batch creation request for benefiicary list id: %s", id
     )
 
     pbms_session_maker = sessionmaker(
@@ -62,7 +62,7 @@ def disbursement_batch_creation_worker(id: int):
             )
 
             _logger.info(
-                f"Total detail batches fetched from BeneficiaryListDetails: {len(beneficiary_list_details)}"
+                f"Total beneficiary detail batches fetched from BeneficiaryListDetails: {len(beneficiary_list_details)}"
             )
             _logger.info(
                 f"Total disbursement envelopes fetched from BeneficiaryListDetails: {len(disbursement_envelopes)}"
@@ -106,13 +106,11 @@ def disbursement_batch_creation_worker(id: int):
                         disbursement_batch_by_envelope
                     )
 
-            _logger.info(
-                f"disbursement batches: {disbursement_batches_by_envelope_by_batch}"
+            _logger.debug(
+                f"Disbursement batches: {disbursement_batches_by_envelope_by_batch}"
             )
-
             # Bulk insert all the disbursement batches
             bg_task_session.add_all(disbursement_batches_by_envelope_by_batch)
-
             _logger.info(
                 f"Disbursement batch records created successfully for beneficiary list id: {id}"
             )

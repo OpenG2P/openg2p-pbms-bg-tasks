@@ -8,7 +8,7 @@ from openg2p_bg_task_models.models import (
     DisbursementEnvelope,
 )
 from openg2p_bg_task_registry_adapters.cache import init_cache
-from openg2p_bg_task_registry_adapters.models import BeneficiaryListSummaryWorker
+from openg2p_bg_task_registry_adapters.migrate import get_models
 from openg2p_fastapi_common.app import Initializer as BaseInitializer
 from openg2p_fastapi_common.context import dbengine
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -58,6 +58,7 @@ class Initializer(BaseInitializer):
             await DisbursementBatch.create_migrate()
             await DisbursementEnvelope.create_migrate()
 
-            await BeneficiaryListSummaryWorker.create_migrate()
+            for model in get_models():
+                await model.create_migrate()
 
         asyncio.run(migrate())
