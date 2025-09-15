@@ -113,6 +113,7 @@ class G2PBridgeDisbursementHelper:
                 beneficiary_id=disbursement.beneficiary_id,
                 beneficiary_name=None,
                 disbursement_quantity=disbursement.entitlement,
+                compute_elements=disbursement.compute_elements,
                 disbursement_cycle_id=int(disbursement_batch.disbursement_cycle_id),
                 disbursement_batch_control_id=disbursement_batch.id,
                 narrative=narrative,
