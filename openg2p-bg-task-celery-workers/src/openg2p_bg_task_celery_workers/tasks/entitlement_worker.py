@@ -119,7 +119,10 @@ def entitlement_worker(id: str):
                             calculated_entitlement = 0
                             multiplier_value = 0
                             if is_registrant_entitled:
-                                calculated_entitlement, multiplier_value = calculate_entitlement(
+                                (
+                                    calculated_entitlement,
+                                    multiplier_value,
+                                ) = calculate_entitlement(
                                     sr_session,
                                     registrant_detail,
                                     entitlement_rule_definition,
@@ -137,7 +140,7 @@ def entitlement_worker(id: str):
                                 calculated_entitlement,
                                 entitlement_rule_definition.multiplier,
                                 multiplier_value,
-                                is_registrant_entitled
+                                is_registrant_entitled,
                             )
 
                         except Exception as e:
@@ -226,7 +229,7 @@ def update_registrant_detail_json(
     calculated_entitlement,
     entitlement_rule_multiplier,
     multiplier_value,
-    is_registrant_entitled
+    is_registrant_entitled,
 ):
     if benefit_code_id in registrant_detail.entitlement:
         existing_entitlement = registrant_detail.entitlement[benefit_code_id]
@@ -252,7 +255,9 @@ def update_registrant_detail_json(
         if benefit_code_id not in registrant_detail.compute_elements:
             registrant_detail.compute_elements[benefit_code_id] = {}
 
-        registrant_detail.compute_elements[benefit_code_id].setdefault(entitlement_rule_multiplier, multiplier_value)
+        registrant_detail.compute_elements[benefit_code_id].setdefault(
+            entitlement_rule_multiplier, multiplier_value
+        )
 
 
 def calculate_entitlement(
