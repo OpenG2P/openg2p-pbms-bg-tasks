@@ -62,7 +62,7 @@ def construct_priority_query(sql_queries: list, registrant_ids: list) -> TextCla
                 SELECT * FROM (
                     {intersect_query}
                 ) AS subquery
-                WHERE unique_id IN ({ids_str})
+                WHERE link_registry_id IN ({ids_str})
             """
             _logger.debug("Constructed query for priority: %s", filtered_query)
             return text(filtered_query)
