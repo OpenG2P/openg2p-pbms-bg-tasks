@@ -16,4 +16,4 @@ class G2PRegistry(BaseORMModel):
     __abstract__ = True
 
     id = mapped_column(Integer, primary_key=True, autoincrement=True)
-    unique_id = mapped_column(String, nullable=True)
+    link_registry_id = mapped_column(String, nullable=True)
