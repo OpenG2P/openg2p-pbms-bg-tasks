@@ -255,7 +255,9 @@ def update_registrant_detail_json(
         registrant_detail.compute_elements[benefit_code_id] = {}
 
     if is_registrant_entitled and entitlement_rule_multiplier:
-        registrant_detail.compute_elements[benefit_code_id][entitlement_rule_multiplier] = multiplier_value
+        registrant_detail.compute_elements[benefit_code_id][
+            entitlement_rule_multiplier
+        ] = multiplier_value
 
 
 def calculate_entitlement(

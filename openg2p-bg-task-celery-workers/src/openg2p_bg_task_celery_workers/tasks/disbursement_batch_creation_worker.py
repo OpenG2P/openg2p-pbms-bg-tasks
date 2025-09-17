@@ -87,7 +87,7 @@ def disbursement_batch_creation_worker(id: int):
                             ],
                             compute_elements=registrant_detail.compute_elements[
                                 disbursement_envelope.benefit_code_id
-                            ]
+                            ],
                         )
                         disbursements_by_benefit_code.append(
                             disbursement_by_benefit_code.model_dump(mode="json")
