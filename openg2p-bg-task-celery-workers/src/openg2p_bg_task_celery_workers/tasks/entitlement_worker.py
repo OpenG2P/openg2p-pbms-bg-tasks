@@ -251,13 +251,13 @@ def update_registrant_detail_json(
             )
         registrant_detail.entitlement[benefit_code_id] = addl_entitlement
 
-    if is_registrant_entitled and entitlement_rule_multiplier:
-        if benefit_code_id not in registrant_detail.compute_elements:
-            registrant_detail.compute_elements[benefit_code_id] = {}
+    if benefit_code_id not in registrant_detail.compute_elements:
+        registrant_detail.compute_elements[benefit_code_id] = {}
 
-        registrant_detail.compute_elements[benefit_code_id].setdefault(
-            entitlement_rule_multiplier, multiplier_value
-        )
+    if is_registrant_entitled and entitlement_rule_multiplier:
+        registrant_detail.compute_elements[benefit_code_id][
+            entitlement_rule_multiplier
+        ] = multiplier_value
 
 
 def calculate_entitlement(

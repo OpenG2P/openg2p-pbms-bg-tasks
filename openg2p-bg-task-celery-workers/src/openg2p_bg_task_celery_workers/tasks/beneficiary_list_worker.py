@@ -100,6 +100,7 @@ def beneficiary_list_worker(id: int):
                         RegistrantDetails(
                             registrant_id=registry_row[0],
                             entitlement={},
+                            compute_elements={},
                         ).model_dump(mode="json")
                     )
 

@@ -87,11 +87,7 @@ def disbursement_batch_creation_worker(id: int):
                             ],
                             compute_elements=registrant_detail.compute_elements[
                                 disbursement_envelope.benefit_code_id
-                            ]
-                            if registrant_detail.compute_elements
-                            and disbursement_envelope.benefit_code_id
-                            in registrant_detail.compute_elements
-                            else {},
+                            ],
                         )
                         disbursements_by_benefit_code.append(
                             disbursement_by_benefit_code.model_dump(mode="json")
@@ -147,6 +143,7 @@ def disbursement_batch_creation_worker(id: int):
             )
             beneficiary_list.dbc_latest_error_code = str(e)
             pbms_session.commit()
+            raise e
 
         _logger.info(
             "Completed disbursement batch creation for beneficiary_list_id: %s" % id
