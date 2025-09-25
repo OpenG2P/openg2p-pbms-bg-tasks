@@ -20,16 +20,7 @@ _logger = logging.getLogger(_config.logging_default_logger_name)
 class Initializer(BaseInitializer):
     def initialize(self, **kwargs):
         super().initialize()
+
+        BenefitProgramController().post_init()
+        BenefitProgramService()
    
-    def migrate_database(self, args):
-        super().migrate_database(args)
-
-        async def migrate():
-            _logger.info("Migrating database")
-            await BeneficiaryListDetails.create_migrate()
-
-
-            for model in get_models():
-                await model.create_migrate()
-
-        asyncio.run(migrate())

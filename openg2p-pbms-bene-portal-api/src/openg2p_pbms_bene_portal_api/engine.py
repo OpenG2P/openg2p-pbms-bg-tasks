@@ -29,22 +29,32 @@ def construct_db_datasource(
 
 
 def get_engine():
-    if _config.db_datasource:
-        db_datasource_sr = construct_db_datasource(
+    engines = {}
+    
+    # PBMS Database
+    if hasattr(_config, 'db_username_pbms'):
+        db_datasource_pbms = construct_db_datasource(
             _config.db_driver,
-            _config.db_username_sr,
-            _config.db_password_sr,
-            _config.db_hostname_sr,
-            _config.db_port_sr,
-            _config.db_dbname_sr,
+            _config.db_username_pbms,
+            _config.db_password_pbms,
+            _config.db_hostname_pbms,
+            _config.db_port_pbms,
+            _config.db_dbname_pbms,
         )
-
-        db_engine_bg_task = create_async_engine(_config.db_datasource)
-        db_engine_sr = create_async_engine(db_datasource_sr)
-        return {
-            "db_engine_bg_task": db_engine_bg_task,
-            "db_engine_sr": db_engine_sr,
-        }
-    return {}
+        engines["db_engine_pbms"] = create_async_engine(db_datasource_pbms)
+    
+    # BG Task Database
+    if hasattr(_config, 'db_username_bg_task'):
+        db_datasource_bg_task = construct_db_datasource(
+            _config.db_driver,
+            _config.db_username_bg_task,
+            _config.db_password_bg_task,
+            _config.db_hostname_bg_task,
+            _config.db_port_bg_task,
+            _config.db_dbname_bg_task,
+        )
+        engines["db_engine_bg_task"] = create_async_engine(db_datasource_bg_task)
+    
+    return engines
 
 

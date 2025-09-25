@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import List
 
-from openg2p_bg_task_models.schemas import (
+from openg2p_pbms_models.schemas import (
     BenefitProgramRequest,
     BenefitProgram,
     BenefitProgramResponse,
@@ -51,7 +51,7 @@ class BenefitProgramService(BaseService):
         beneficiary_id = None
 
         session_maker_pbms = async_sessionmaker(
-            bind=_engine.get("db_engine_sr"), expire_on_commit=False
+            bind=_engine.get("db_engine_pbms"), expire_on_commit=False
         )
         session_maker_bg = async_sessionmaker(
             bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
@@ -249,7 +249,7 @@ class BenefitProgramService(BaseService):
     ) -> BenefitProgramResponse:
         # Reuse the same PBMS queries but skip membership filtering
         session_maker_pbms = async_sessionmaker(
-            bind=_engine.get("db_engine_sr"), expire_on_commit=False
+            bind=_engine.get("db_engine_pbms"), expire_on_commit=False
         )
 
         async with session_maker_pbms() as session_pbms:
@@ -324,7 +324,7 @@ class BenefitProgramService(BaseService):
             )
 
         session_maker_pbms = async_sessionmaker(
-            bind=_engine.get("db_engine_sr"), expire_on_commit=False
+            bind=_engine.get("db_engine_pbms"), expire_on_commit=False
         )
         async with session_maker_pbms() as session_pbms:
             program = (

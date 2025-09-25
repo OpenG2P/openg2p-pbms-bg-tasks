@@ -1,7 +1,7 @@
 import logging
 
 from openg2p_bg_task_models.errors import BGTaskException
-from openg2p_bg_task_models.schemas import (
+from openg2p_pbms_models.schemas import (
     BenefitProgramRequest,
     BenefitProgramResponse,
     BenefitProgramDetailResponse,
