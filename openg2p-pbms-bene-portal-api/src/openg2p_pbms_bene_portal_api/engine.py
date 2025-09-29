@@ -30,9 +30,9 @@ def construct_db_datasource(
 
 def get_engine():
     engines = {}
-    
+
     # PBMS Database
-    if hasattr(_config, 'db_username_pbms'):
+    if hasattr(_config, "db_username_pbms"):
         db_datasource_pbms = construct_db_datasource(
             _config.db_driver,
             _config.db_username_pbms,
@@ -42,9 +42,9 @@ def get_engine():
             _config.db_dbname_pbms,
         )
         engines["db_engine_pbms"] = create_async_engine(db_datasource_pbms)
-    
+
     # BG Task Database
-    if hasattr(_config, 'db_username_bg_task'):
+    if hasattr(_config, "db_username_bg_task"):
         db_datasource_bg_task = construct_db_datasource(
             _config.db_driver,
             _config.db_username_bg_task,
@@ -54,7 +54,5 @@ def get_engine():
             _config.db_dbname_bg_task,
         )
         engines["db_engine_bg_task"] = create_async_engine(db_datasource_bg_task)
-    
+
     return engines
-
-

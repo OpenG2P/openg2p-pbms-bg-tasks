@@ -1,31 +1,32 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import List
 
+from openg2p_bg_task_models.models.beneficiary_list_details import (
+    BeneficiaryListDetails,
+)
+from openg2p_fastapi_common.schemas import G2PResponseStatus
+from openg2p_fastapi_common.service import BaseService
+from openg2p_pbms_models.errors import PBMSErrorCodes, PBMSException
+from openg2p_pbms_models.models import (
+    G2PBeneficiaryList,
+    G2PBenefitCodes,
+    G2PProgramBenefitCodes,
+    G2PProgramDefinition,
+)
 from openg2p_pbms_models.schemas import (
-    BenefitProgramRequest,
     BenefitProgram,
-    BenefitProgramResponse,
-    BenefitProgramResponseBody,
     BenefitProgramDetailResponse,
     BenefitProgramDetailResponseBody,
+    BenefitProgramRequest,
+    BenefitProgramResponse,
+    BenefitProgramResponseBody,
 )
-from openg2p_fastapi_common.service import BaseService
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from ..config import Settings
 from ..engine import get_engine
-from openg2p_pbms_models.models.beneficiary_list import G2PBeneficiaryList
-from openg2p_pbms_models.models.enrollment_cycle import G2PEnrollmentCycle
-from openg2p_pbms_models.models.program_definiton import G2PProgramDefinition
-from openg2p_pbms_models.models.program_benefit_codes import (
-    G2PProgramBenefitCodes,
-)
-from openg2p_pbms_models.models.benefit_codes import G2PBenefitCodes
-from openg2p_bg_task_models.models.beneficiary_list_details import (
-    BeneficiaryListDetails,
-)
 
 _config = Settings.get_config()
 _logger = logging.getLogger(_config.logging_default_logger_name)
@@ -33,22 +34,73 @@ _engine = get_engine()
 
 
 class BenefitProgramService(BaseService):
+    async def _get_enrollment_status(
+        self,
+        session_pbms,
+        session_bg,
+        program_id: int,
+        registrant_id: str,
+    ) -> tuple[bool, date | None]:
+        latest_list_row = (
+            await session_pbms.execute(
+                select(
+                    G2PBeneficiaryList.beneficiary_list_id,
+                    G2PBeneficiaryList.approval_date,
+                )
+                .where(
+                    (G2PBeneficiaryList.program_id == program_id)
+                    & (G2PBeneficiaryList.approval_date.is_not(None))
+                )
+                .order_by(G2PBeneficiaryList.approval_date.desc())
+                .limit(1)
+            )
+        ).first()
+
+        if not latest_list_row:
+            _logger.info(f"No approved beneficiary list for program_id {program_id}")
+            return False, None
+
+        beneficiary_list_id = latest_list_row.beneficiary_list_id
+        enrolment_date = latest_list_row.approval_date
+
+        bld = (
+            (
+                await session_bg.execute(
+                    select(BeneficiaryListDetails).where(
+                        BeneficiaryListDetails.beneficiary_list_id
+                        == beneficiary_list_id
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if not bld:
+            return False, enrolment_date
+
+        registrants = bld.registrant_details or []
+        am_i_enrolled = any(
+            isinstance(r, dict) and r.get("registrant_id") == registrant_id
+            for r in registrants
+        )
+        return am_i_enrolled, enrolment_date
+
     async def get_my_programs(
-        self, benefit_program_request: BenefitProgramRequest
+        self, beneficiary_id: str, benefit_program_request: BenefitProgramRequest
     ) -> BenefitProgramResponse:
+        _logger.info(
+            "Get My Programs Request",
+        )
         pagination = (
             benefit_program_request.g2p_request_body.g2p_pagination_request
             if benefit_program_request.g2p_request_body
             else None
         )
-        payload = (
-            benefit_program_request.g2p_request_body.g2p_request_payload
-            if benefit_program_request.g2p_request_body
-            else None
-        )
 
-        # TODO: Extract beneficiary_id from auth context; temporary header-based fallback possible in controller
-        beneficiary_id = None
+        # Extract pagination parameters
+        page_size = pagination.page_size if pagination else 10
+        current_page = pagination.current_page if pagination else 1
+        offset = (current_page - 1) * page_size
 
         session_maker_pbms = async_sessionmaker(
             bind=_engine.get("db_engine_pbms"), expire_on_commit=False
@@ -57,120 +109,53 @@ class BenefitProgramService(BaseService):
             bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
         )
 
-        benefit_programs: List[BenefitProgram] = []
-
+        # Step 1: page programs
         async with session_maker_pbms() as session_pbms:
-            # Latest approved cycle per program
-            sub_latest_cycle = (
-                select(
-                    G2PEnrollmentCycle.program_id,
-                    func.max(G2PEnrollmentCycle.cycle_number).label("max_cycle"),
-                )
-                .where(G2PEnrollmentCycle.approved_for_enrollment.is_(True))
-                .group_by(G2PEnrollmentCycle.program_id)
-                .subquery()
+            total_count_result = await session_pbms.execute(
+                select(func.count(G2PProgramDefinition.id))
             )
-
-            selected_cycles = (
-                select(G2PEnrollmentCycle.id, G2PEnrollmentCycle.program_id)
-                .join(
-                    sub_latest_cycle,
-                    (G2PEnrollmentCycle.program_id == sub_latest_cycle.c.program_id)
-                    & (G2PEnrollmentCycle.cycle_number == sub_latest_cycle.c.max_cycle),
-                )
-            )
-
-            # Approved lists for selected cycles
-            approved_lists_stmt = (
-                select(
-                    G2PBeneficiaryList.id.label("list_pk"),
-                    G2PBeneficiaryList.beneficiary_list_id,
-                    G2PBeneficiaryList.program_id,
-                    G2PBeneficiaryList.approval_date,
-                )
-                .join(selected_cycles.subquery(), G2PBeneficiaryList.enrollment_cycle_id == selected_cycles.subquery().c.id)
-                .where(G2PBeneficiaryList.approval_date.is_not(None))
-            )
-
-            approved_lists = (await session_pbms.execute(approved_lists_stmt)).all()
-
-        # Membership check in bg-task DB via BeneficiaryListDetails
-        async with session_maker_bg() as session_bg:
-            list_ids_for_beneficiary = set()
-            for benefit_code in approved_lists:
-                beneficiary_list_id = benefit_code.beneficiary_list_id
-                beneficiary_list_details = await session_bg.get(BeneficiaryListDetails, {"beneficiary_list_id": beneficiary_list_id})
-                # Fallback when get by PK won't work: query by beneficiary_list_id
-                if not beneficiary_list_details:
-                    beneficiary_list_details = (
-                        await session_bg.execute(
-                            select(BeneficiaryListDetails).where(
-                                BeneficiaryListDetails.beneficiary_list_id
-                                == beneficiary_list_id
-                            )
-                        )
-                    ).scalars().first()
-                if not beneficiary_list_details:
-                    continue
-
-                registrants = beneficiary_list_details.registrant_details or []
-                if any(
-                    isinstance(registrant, dict)
-                    and registrant.get("registrant_id") == beneficiary_id
-                    for registrant in registrants
-                ):
-                    list_ids_for_beneficiary.add(beneficiary_list_id)
-
-        matching_program_ids = {
-            row.program_id for row in approved_lists if row.beneficiary_list_id in list_ids_for_beneficiary
-        }
-
-        if not matching_program_ids:
-            return await self.construct_benefit_program_success_response(
-                benefit_program_request, []
-            )
-
-        async with session_maker_pbms() as session_pbms:
-            # Fetch program definitions
+            total_count_result.scalar()
             programs = (
-                await session_pbms.execute(
-                    select(G2PProgramDefinition).where(
-                        G2PProgramDefinition.id.in_(matching_program_ids)
+                (
+                    await session_pbms.execute(
+                        select(G2PProgramDefinition).offset(offset).limit(page_size)
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
-            # Fetch latest enrolment date per program from the approved lists we had
-            program_id_to_enrolment_date = {}
-            for benefit_code in approved_lists:
-                if benefit_code.beneficiary_list_id in list_ids_for_beneficiary:
-                    current = program_id_to_enrolment_date.get(benefit_code.program_id)
-                    if not current or (benefit_code.approval_date and benefit_code.approval_date > current):
-                        program_id_to_enrolment_date[benefit_code.program_id] = benefit_code.approval_date
-
-            # Fetch benefit codes via mapping
-            benefit_codes = (
-                await session_pbms.execute(
-                    select(
-                        G2PProgramBenefitCodes.program_id,
-                        G2PBenefitCodes.id,
-                        G2PBenefitCodes.benefit_mnemonic,
-                        G2PBenefitCodes.benefit_type,
-                        G2PBenefitCodes.benefit_description,
-                        G2PBenefitCodes.measurement_unit,
-                        G2PProgramBenefitCodes.max_quantity,
-                    )
-                    .join(
-                        G2PBenefitCodes,
-                        G2PProgramBenefitCodes.benefit_code_id == G2PBenefitCodes.id,
-                    )
-                    .where(G2PProgramBenefitCodes.program_id.in_(matching_program_ids))
+        # Step 2: for each program, find latest approved list and check membership
+        benefit_programs: List[BenefitProgram] = []
+        async with session_maker_pbms() as session_pbms, session_maker_bg() as session_bg:
+            for program in programs:
+                am_i_enrolled, enrolment_date = await self._get_enrollment_status(
+                    session_pbms, session_bg, program.id, beneficiary_id
                 )
-            ).all()
 
-            program_id_to_benefit_codes = {}
-            for benefit_code in benefit_codes:
-                program_id_to_benefit_codes.setdefault(benefit_code.program_id, []).append(
+                # fetch benefit codes for this program
+                benefit_codes_from_db = (
+                    await session_pbms.execute(
+                        select(
+                            G2PBenefitCodes.id,
+                            G2PBenefitCodes.benefit_mnemonic,
+                            G2PBenefitCodes.benefit_type,
+                            G2PBenefitCodes.benefit_description,
+                            G2PBenefitCodes.measurement_unit,
+                            G2PProgramBenefitCodes.max_quantity,
+                        )
+                        .join(
+                            G2PProgramBenefitCodes,
+                            G2PProgramBenefitCodes.benefit_code_id
+                            == G2PBenefitCodes.id,
+                        )
+                        .where(G2PProgramBenefitCodes.program_id == program.id)
+                    )
+                ).all()
+                _logger.info(
+                    f"Found {len(benefit_codes_from_db)} benefit codes for program {program.program_mnemonic}"
+                )
+                benefit_codes = [
                     {
                         "id": benefit_code.id,
                         "benefit_code_mnemonic": benefit_code.benefit_mnemonic,
@@ -179,41 +164,47 @@ class BenefitProgramService(BaseService):
                         "benefit_code_max_quantity": benefit_code.max_quantity,
                         "measurement_unit": benefit_code.measurement_unit,
                     }
-                )
+                    for benefit_code in benefit_codes_from_db
+                ]
 
-            for program in programs:
-                benefit_programs.append(
-                    BenefitProgram(
-                        id=program.id,
-                        program_name=program.description,
-                        program_mnemonic=program.program_mnemonic,
-                        program_description=program.description,
-                        application_id=None,
-                        application_status=None,
-                        enrolment_date=program_id_to_enrolment_date.get(program.id),
-                        benefit_codes=program_id_to_benefit_codes.get(program.id, []),
+                if am_i_enrolled:
+                    benefit_programs.append(
+                        BenefitProgram(
+                            id=program.id,
+                            program_name=program.description,
+                            program_mnemonic=program.program_mnemonic,
+                            program_description=program.description,
+                            am_i_enrolled=True,
+                            enrolment_date=enrolment_date,
+                            benefit_codes=benefit_codes,
+                        )
                     )
-                )
+
+        # pagination reflects only enrolled programs in the current page window
+        total_count = len(benefit_programs)
+        total_pages = (total_count + page_size - 1) // page_size
 
         return await self.construct_benefit_program_success_response(
-            benefit_program_request, benefit_programs
+            benefit_program_request, benefit_programs, total_count, total_pages
         )
 
     async def construct_benefit_program_success_response(
         self,
         benefit_program_request: BenefitProgramRequest,
         benefit_programs: List[BenefitProgram],
+        total_count: int = 0,
+        total_pages: int = 0,
     ) -> BenefitProgramResponse:
         benefit_programs_response = BenefitProgramResponse(
             g2p_response_header={
                 "request_id": benefit_program_request.g2p_request_header.request_id,
-                "response_status": "SUCCESS",
+                "response_status": G2PResponseStatus.SUCCESS.value,
                 "response_timestamp": datetime.now(),
             },
             g2p_response_body=BenefitProgramResponseBody(
                 g2p_pagination_response={
-                    "number_of_items": len(benefit_programs),
-                    "number_of_pages": 1,
+                    "number_of_items": total_count,
+                    "number_of_pages": total_pages,
                 },
                 g2p_response_payload=benefit_programs,
             ),
@@ -229,7 +220,7 @@ class BenefitProgramService(BaseService):
         benefit_programs_response = BenefitProgramResponse(
             g2p_response_header={
                 "request_id": benefit_program_request.g2p_request_header.request_id,
-                "response_status": "ERROR",
+                "response_status": G2PResponseStatus.ERROR.value,
                 "response_error_code": error_code,
                 "response_error_message": error_message,
                 "response_timestamp": datetime.now(),
@@ -245,19 +236,53 @@ class BenefitProgramService(BaseService):
         return benefit_programs_response
 
     async def get_all_programs(
-        self, benefit_program_request: BenefitProgramRequest
+        self, beneficiary_id: str, benefit_program_request: BenefitProgramRequest
     ) -> BenefitProgramResponse:
-        # Reuse the same PBMS queries but skip membership filtering
+        pagination = (
+            benefit_program_request.g2p_request_body.g2p_pagination_request
+            if benefit_program_request.g2p_request_body
+            else None
+        )
+
+        # Extract pagination parameters
+        page_size = pagination.page_size if pagination else 30
+        current_page = pagination.current_page if pagination else 1
+        offset = (current_page - 1) * page_size
+
+        # Reuse the same PBMS queries and compute membership per program's latest approved list
         session_maker_pbms = async_sessionmaker(
             bind=_engine.get("db_engine_pbms"), expire_on_commit=False
         )
+        session_maker_bg = async_sessionmaker(
+            bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
+        )
 
-        async with session_maker_pbms() as session_pbms:
+        async with session_maker_pbms() as session_pbms, session_maker_bg() as session_bg:
+            # Count total programs
+            total_count_result = await session_pbms.execute(
+                select(func.count(G2PProgramDefinition.id))
+            )
+            total_count = total_count_result.scalar()
+            total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
+
+            # Fetch paginated programs
             programs = (
-                await session_pbms.execute(select(G2PProgramDefinition))
-            ).scalars().all()
+                (
+                    await session_pbms.execute(
+                        select(G2PProgramDefinition).offset(offset).limit(page_size)
+                    )
+                )
+                .scalars()
+                .all()
+            )
 
-            # Benefit codes
+            if not programs:
+                raise PBMSException(
+                    code=PBMSErrorCodes.PROGRAM_NOT_FOUND,
+                    message="No programs found",
+                )
+
+            # Benefit codes for all programs (not just paginated ones for efficiency)
             benefit_codes = (
                 await session_pbms.execute(
                     select(
@@ -277,7 +302,9 @@ class BenefitProgramService(BaseService):
 
             program_id_to_benefit_codes = {}
             for benefit_code in benefit_codes:
-                program_id_to_benefit_codes.setdefault(benefit_code.program_id, []).append(
+                program_id_to_benefit_codes.setdefault(
+                    benefit_code.program_id, []
+                ).append(
                     {
                         "id": benefit_code.id,
                         "benefit_code_mnemonic": benefit_code.benefit_mnemonic,
@@ -290,25 +317,28 @@ class BenefitProgramService(BaseService):
 
             benefit_programs: List[BenefitProgram] = []
             for program in programs:
+                am_i_enrolled, enrolment_date = await self._get_enrollment_status(
+                    session_pbms, session_bg, program.id, beneficiary_id
+                )
+
                 benefit_programs.append(
                     BenefitProgram(
                         id=program.id,
                         program_name=program.description,
                         program_mnemonic=program.program_mnemonic,
                         program_description=program.description,
-                        application_id=None,
-                        application_status=None,
-                        enrolment_date=None,
+                        am_i_enrolled=am_i_enrolled,
+                        enrolment_date=enrolment_date,
                         benefit_codes=program_id_to_benefit_codes.get(program.id, []),
                     )
                 )
 
         return await self.construct_benefit_program_success_response(
-            benefit_program_request, benefit_programs
+            benefit_program_request, benefit_programs, total_count, total_pages
         )
 
     async def get_program(
-        self, benefit_program_request: BenefitProgramRequest
+        self, beneficiary_id: str, benefit_program_request: BenefitProgramRequest
     ) -> BenefitProgramDetailResponse:
         program_id = (
             benefit_program_request.g2p_request_body.g2p_request_payload.program_id
@@ -328,18 +358,32 @@ class BenefitProgramService(BaseService):
         )
         async with session_maker_pbms() as session_pbms:
             program = (
-                await session_pbms.execute(
-                    select(G2PProgramDefinition).where(G2PProgramDefinition.id == int(program_id))
+                (
+                    await session_pbms.execute(
+                        select(G2PProgramDefinition).where(
+                            G2PProgramDefinition.id == int(program_id)
+                        )
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if not program:
-                return await self.construct_benefit_program_detail_failure_response(
-                    benefit_program_request,
-                    "NOT_FOUND",
-                    "Program not found",
+                raise PBMSException(
+                    code=PBMSErrorCodes.PROGRAM_NOT_FOUND,
+                    message="Program not found",
+                )
+            _logger.info(f"Found program: {program.program_mnemonic}")
+            # Determine latest approved list and membership for this program
+            session_maker_bg_local = async_sessionmaker(
+                bind=_engine.get("db_engine_bg_task"), expire_on_commit=False
+            )
+            async with session_maker_bg_local() as session_bg_local:
+                am_i_enrolled, enrolment_date = await self._get_enrollment_status(
+                    session_pbms, session_bg_local, program.id, beneficiary_id
                 )
 
-            join_codes = (
+            benefit_codes_from_db = (
                 await session_pbms.execute(
                     select(
                         G2PBenefitCodes.id,
@@ -359,24 +403,25 @@ class BenefitProgramService(BaseService):
 
             benefit_codes = [
                 {
-                    "id": row.id,
-                    "benefit_code_mnemonic": row.benefit_mnemonic,
-                    "benefit_type": row.benefit_type,
-                    "benefit_code_description": row.benefit_description,
-                    "benefit_code_max_quantity": row.max_quantity,
-                    "measurement_unit": row.measurement_unit,
+                    "id": benefit_code.id,
+                    "benefit_code_mnemonic": benefit_code.benefit_mnemonic,
+                    "benefit_type": benefit_code.benefit_type,
+                    "benefit_code_description": benefit_code.benefit_description,
+                    "benefit_code_max_quantity": benefit_code.max_quantity,
+                    "measurement_unit": benefit_code.measurement_unit,
                 }
-                for row in join_codes
+                for benefit_code in benefit_codes_from_db
             ]
-
+            _logger.info(
+                f"Found {len(benefit_codes)} benefit codes for program {program.program_mnemonic}"
+            )
             benefit_program = BenefitProgram(
                 id=program.id,
                 program_name=program.description,
                 program_mnemonic=program.program_mnemonic,
                 program_description=program.description,
-                application_id=None,
-                application_status=None,
-                enrolment_date=None,
+                am_i_enrolled=am_i_enrolled,
+                enrolment_date=enrolment_date,
                 benefit_codes=benefit_codes,
             )
 
@@ -392,7 +437,7 @@ class BenefitProgramService(BaseService):
         return BenefitProgramDetailResponse(
             g2p_response_header={
                 "request_id": benefit_program_request.g2p_request_header.request_id,
-                "response_status": G2PBenefitCodes.SUCCESS.value,
+                "response_status": G2PResponseStatus.SUCCESS.value,
                 "response_timestamp": datetime.now(),
             },
             g2p_response_body=BenefitProgramDetailResponseBody(
@@ -409,7 +454,7 @@ class BenefitProgramService(BaseService):
         return BenefitProgramDetailResponse(
             g2p_response_header={
                 "request_id": benefit_program_request.g2p_request_header.request_id,
-                "response_status": G2PBenefitCodes.ERROR.value,
+                "response_status": G2PResponseStatus.ERROR.value,
                 "response_error_code": error_code,
                 "response_error_message": error_message,
                 "response_timestamp": datetime.now(),
@@ -418,4 +463,3 @@ class BenefitProgramService(BaseService):
                 g2p_response_payload=None
             ),
         )
-

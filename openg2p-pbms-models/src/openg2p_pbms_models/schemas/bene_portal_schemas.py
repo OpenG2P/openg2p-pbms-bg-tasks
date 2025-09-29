@@ -1,19 +1,16 @@
 from datetime import date
-from typing import List
-
-from pydantic import BaseModel
+from typing import List, Optional
 
 from openg2p_fastapi_common.schemas import (
+    G2PPaginationRequest,
     G2PRequest,
     G2PRequestBody,
     G2PRequestHeader,
-    G2PPaginationRequest,
     G2PResponse,
     G2PResponseBody,
-    G2PResponseHeader,
-    G2PResponseStatus,
-    G2PPaginationResponse,
 )
+from pydantic import BaseModel
+
 
 class BenefitCode(BaseModel):
     id: int
@@ -29,9 +26,8 @@ class BenefitProgram(BaseModel):
     program_name: str
     program_mnemonic: str
     program_description: str
-    application_id: int
-    application_status: str
-    enrolment_date: date
+    am_i_enrolled: bool
+    enrolment_date: Optional[date] = None
     benefit_codes: List[BenefitCode]
 
 
@@ -50,12 +46,13 @@ class BenefitProgramRequest(G2PRequest):
     g2p_request_header: G2PRequestHeader
     g2p_request_body: BenefitProgramRequestBody
 
+
 class BenefitProgramResponseBody(G2PResponseBody):
     g2p_response_payload: List[BenefitProgram]
 
 
 class BenefitProgramDetailResponseBody(G2PResponseBody):
-    g2p_response_payload: BenefitProgram
+    g2p_response_payload: Optional[BenefitProgram] = None
 
 
 class BenefitProgramResponse(G2PResponse):

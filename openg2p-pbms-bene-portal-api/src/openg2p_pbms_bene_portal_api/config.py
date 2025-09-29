@@ -31,4 +31,3 @@ class Settings(BaseSettings):
     db_hostname_bg_task: str = "localhost"
     db_port_bg_task: int = 5432
     db_dbname_bg_task: str = "bg_taskdb"
-    
