@@ -92,8 +92,8 @@ class BenefitProgramService(BaseService):
             "Get My Programs Request",
         )
         pagination = (
-            benefit_program_request.g2p_request_body.g2p_pagination_request
-            if benefit_program_request.g2p_request_body
+            benefit_program_request.request_body.pagination_request
+            if benefit_program_request.request_body
             else None
         )
 
@@ -196,17 +196,17 @@ class BenefitProgramService(BaseService):
         total_pages: int = 0,
     ) -> BenefitProgramResponse:
         benefit_programs_response = BenefitProgramResponse(
-            g2p_response_header={
-                "request_id": benefit_program_request.g2p_request_header.request_id,
+            response_header={
+                "request_id": benefit_program_request.request_header.request_id,
                 "response_status": G2PResponseStatus.SUCCESS.value,
                 "response_timestamp": datetime.now(),
             },
-            g2p_response_body=BenefitProgramResponseBody(
-                g2p_pagination_response={
+            response_body=BenefitProgramResponseBody(
+                pagination_response={
                     "number_of_items": total_count,
                     "number_of_pages": total_pages,
                 },
-                g2p_response_payload=benefit_programs,
+                response_payload=benefit_programs,
             ),
         )
         return benefit_programs_response
@@ -218,19 +218,19 @@ class BenefitProgramService(BaseService):
         error_message: str | None = None,
     ) -> BenefitProgramResponse:
         benefit_programs_response = BenefitProgramResponse(
-            g2p_response_header={
-                "request_id": benefit_program_request.g2p_request_header.request_id,
+            response_header={
+                "request_id": benefit_program_request.request_header.request_id,
                 "response_status": G2PResponseStatus.ERROR.value,
                 "response_error_code": error_code,
                 "response_error_message": error_message,
                 "response_timestamp": datetime.now(),
             },
-            g2p_response_body=BenefitProgramResponseBody(
-                g2p_pagination_response={
+            response_body=BenefitProgramResponseBody(
+                pagination_response={
                     "number_of_items": 0,
                     "number_of_pages": 0,
                 },
-                g2p_response_payload=[],
+                response_payload=[],
             ),
         )
         return benefit_programs_response
@@ -239,8 +239,8 @@ class BenefitProgramService(BaseService):
         self, beneficiary_id: str, benefit_program_request: BenefitProgramRequest
     ) -> BenefitProgramResponse:
         pagination = (
-            benefit_program_request.g2p_request_body.g2p_pagination_request
-            if benefit_program_request.g2p_request_body
+            benefit_program_request.request_body.pagination_request
+            if benefit_program_request.request_body
             else None
         )
 
@@ -341,9 +341,9 @@ class BenefitProgramService(BaseService):
         self, beneficiary_id: str, benefit_program_request: BenefitProgramRequest
     ) -> BenefitProgramDetailResponse:
         program_id = (
-            benefit_program_request.g2p_request_body.g2p_request_payload.program_id
-            if benefit_program_request.g2p_request_body
-            and benefit_program_request.g2p_request_body.g2p_request_payload
+            benefit_program_request.request_body.request_payload.program_id
+            if benefit_program_request.request_body
+            and benefit_program_request.request_body.request_payload
             else None
         )
         if not program_id:
@@ -435,13 +435,13 @@ class BenefitProgramService(BaseService):
         benefit_program: BenefitProgram,
     ) -> BenefitProgramDetailResponse:
         return BenefitProgramDetailResponse(
-            g2p_response_header={
-                "request_id": benefit_program_request.g2p_request_header.request_id,
+            response_header={
+                "request_id": benefit_program_request.request_header.request_id,
                 "response_status": G2PResponseStatus.SUCCESS.value,
                 "response_timestamp": datetime.now(),
             },
-            g2p_response_body=BenefitProgramDetailResponseBody(
-                g2p_response_payload=benefit_program
+            response_body=BenefitProgramDetailResponseBody(
+                response_payload=benefit_program
             ),
         )
 
@@ -452,14 +452,14 @@ class BenefitProgramService(BaseService):
         error_message: str | None = None,
     ) -> BenefitProgramDetailResponse:
         return BenefitProgramDetailResponse(
-            g2p_response_header={
-                "request_id": benefit_program_request.g2p_request_header.request_id,
+            response_header={
+                "request_id": benefit_program_request.request_header.request_id,
                 "response_status": G2PResponseStatus.ERROR.value,
                 "response_error_code": error_code,
                 "response_error_message": error_message,
                 "response_timestamp": datetime.now(),
             },
-            g2p_response_body=BenefitProgramDetailResponseBody(
-                g2p_response_payload=None
+            response_body=BenefitProgramDetailResponseBody(
+                response_payload=None
             ),
         )

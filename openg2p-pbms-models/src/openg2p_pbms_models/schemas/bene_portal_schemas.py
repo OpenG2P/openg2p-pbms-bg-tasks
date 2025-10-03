@@ -38,26 +38,26 @@ class BenefitProgramRequestPayload(BaseModel):
 
 
 class BenefitProgramRequestBody(G2PRequestBody):
-    g2p_pagination_request: G2PPaginationRequest | None = None
-    g2p_request_payload: BenefitProgramRequestPayload | None = None
+    pagination_request: G2PPaginationRequest | None = None
+    request_payload: BenefitProgramRequestPayload | None = None
 
 
 class BenefitProgramRequest(G2PRequest):
-    g2p_request_header: G2PRequestHeader
-    g2p_request_body: BenefitProgramRequestBody
+    request_header: G2PRequestHeader
+    request_body: BenefitProgramRequestBody
 
 
 class BenefitProgramResponseBody(G2PResponseBody):
-    g2p_response_payload: List[BenefitProgram]
+    response_payload: List[BenefitProgram]
 
 
 class BenefitProgramDetailResponseBody(G2PResponseBody):
-    g2p_response_payload: Optional[BenefitProgram] = None
+    response_payload: Optional[BenefitProgram] = None
 
 
 class BenefitProgramResponse(G2PResponse):
-    g2p_response_body: BenefitProgramResponseBody
+    response_body: BenefitProgramResponseBody
 
 
 class BenefitProgramDetailResponse(G2PResponse):
-    g2p_response_body: BenefitProgramDetailResponseBody
+    response_body: BenefitProgramDetailResponseBody
