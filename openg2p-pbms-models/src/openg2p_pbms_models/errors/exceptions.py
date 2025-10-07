@@ -14,5 +14,3 @@ class PBMSException(Exception):
         self.message: Optional[str] = message
         self.payload: object = payload
         super().__init__(code, self.message)
-
-

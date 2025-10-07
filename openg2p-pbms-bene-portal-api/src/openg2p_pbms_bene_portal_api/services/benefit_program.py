@@ -153,7 +153,10 @@ class BenefitProgramService(BaseService):
                             G2PProgramBenefitCodes.benefit_code_id
                             == G2PBenefitCodes.id,
                         )
-                        .where(G2PProgramBenefitCodes.program_id == g2p_program_definition.id)
+                        .where(
+                            G2PProgramBenefitCodes.program_id
+                            == g2p_program_definition.id
+                        )
                     )
                 ).all()
                 _logger.info(
@@ -463,7 +466,5 @@ class BenefitProgramService(BaseService):
                 "response_error_message": error_message,
                 "response_timestamp": datetime.now(),
             },
-            response_body=BenefitProgramDetailResponseBody(
-                response_payload=None
-            ),
+            response_body=BenefitProgramDetailResponseBody(response_payload=None),
         )

@@ -118,7 +118,9 @@ class BenefitProgramController(BaseController):
                     code="AUTH001", message="Authentication credentials are missing"
                 )
             beneficiary_id = auth_credentials.preferred_username
-            _logger.info("Fetching program detail for Beneficiary ID: %s", beneficiary_id)
+            _logger.info(
+                "Fetching program detail for Beneficiary ID: %s", beneficiary_id
+            )
             program_response: BenefitProgramDetailResponse = (
                 await self.benefit_programs_service.get_program(
                     beneficiary_id, benefit_program_request

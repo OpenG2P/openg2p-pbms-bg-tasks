@@ -8,5 +8,3 @@ class PBMSErrorCodes(str, Enum):
     FORBIDDEN = "FORBIDDEN"
     INTERNAL_ERROR = "INTERNAL_ERROR"
     DB_ERROR = "DB_ERROR"
-
-
