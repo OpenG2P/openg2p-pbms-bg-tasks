@@ -29,6 +29,7 @@ jobs:
           python -m pip install git+https://github.com/openg2p/openg2p-fastapi-common@1.1\#subdirectory=openg2p-fastapi-common
           python -m pip install git+https://github.com/openg2p/openg2p-fastapi-common@1.1\#subdirectory=openg2p-fastapi-auth
           python -m pip install ../openg2p-pbms-models
+          python -m pip install ../openg2p-bg-task-models
           python -m pip install .
       - name: Generate openapi json
         run: |
