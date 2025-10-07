@@ -53,7 +53,14 @@ class BenefitProgramController(BaseController):
     ) -> BenefitProgramResponse:
         _logger.debug("Get My Programs Request: %s", benefit_program_request)
         try:
-            beneficiary_id = auth_credentials.sub
+            _logger.info("Authenticated Beneficiary ID: %s", auth_credentials)
+            if not auth_credentials:
+                _logger.error("Authentication credentials are missing")
+                raise PBMSException(
+                    code="AUTH001", message="Authentication credentials are missing"
+                )
+            beneficiary_id = auth_credentials.preferred_username
+            _logger.info("Fetching programs for Beneficiary ID: %s", beneficiary_id)
             benefit_programs_response: BenefitProgramResponse = (
                 await self.benefit_programs_service.get_my_programs(
                     beneficiary_id, benefit_program_request
@@ -75,9 +82,17 @@ class BenefitProgramController(BaseController):
     ) -> BenefitProgramResponse:
         _logger.debug("Get All Programs Request: %s", benefit_program_request)
         try:
+            _logger.info("Authenticated Beneficiary ID: %s", auth_credentials)
+            if not auth_credentials:
+                _logger.error("Authentication credentials are missing")
+                raise PBMSException(
+                    code="AUTH001", message="Authentication credentials are missing"
+                )
+            beneficiary_id = auth_credentials.preferred_username
+            _logger.info("Fetching all programs for Beneficiary ID: %s", beneficiary_id)
             benefit_programs_response: BenefitProgramResponse = (
                 await self.benefit_programs_service.get_all_programs(
-                    benefit_program_request
+                    beneficiary_id, benefit_program_request
                 )
             )
             _logger.info("All programs retrieved successfully")
@@ -96,8 +111,18 @@ class BenefitProgramController(BaseController):
     ) -> BenefitProgramDetailResponse:
         _logger.debug("Get Program Request: %s", benefit_program_request)
         try:
+            _logger.info("Authenticated Beneficiary ID: %s", auth_credentials)
+            if not auth_credentials:
+                _logger.error("Authentication credentials are missing")
+                raise PBMSException(
+                    code="AUTH001", message="Authentication credentials are missing"
+                )
+            beneficiary_id = auth_credentials.preferred_username
+            _logger.info("Fetching program detail for Beneficiary ID: %s", beneficiary_id)
             program_response: BenefitProgramDetailResponse = (
-                await self.benefit_programs_service.get_program(benefit_program_request)
+                await self.benefit_programs_service.get_program(
+                    beneficiary_id, benefit_program_request
+                )
             )
             _logger.info("Program retrieved successfully")
             _logger.debug("Get Program Response: %s", program_response)
