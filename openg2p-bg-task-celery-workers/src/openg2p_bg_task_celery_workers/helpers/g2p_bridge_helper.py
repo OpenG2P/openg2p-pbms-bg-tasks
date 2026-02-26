@@ -21,19 +21,7 @@ class G2PBridgeDisbursementHelper:
     def __init__(self, config, logger):
         self._config = config
         self._logger = logger
-        self.keymanager_crypto_helper = KeymanagerCryptoHelper(
-            self,
-            api_base_url=self._config.keymanager_api_base_url,
-            auth_enabled=self._config.keymanager_auth_enabled,
-            auth_url=self._config.keymanager_auth_url,
-            auth_client_id=self._config.keymanager_auth_client_id,
-            auth_client_secret=self._config.keymanager_auth_client_secret,
-            api_domain=self._config.keymanager_api_domain,
-            ssl_verify=self._config.keymanager_ssl_verify,
-            api_timeout=self._config.keymanager_api_timeout,
-            sign_app_id=self._config.keymanager_sign_app_id,
-            sign_ref_id=self._config.keymanager_sign_ref_id,
-        )
+        self.keymanager_crypto_helper = KeymanagerCryptoHelper()
 
     def create_disbursement_envelopes(self, disbursement_envelope_request_message):
         """
