@@ -9,6 +9,7 @@ from openg2p_pbms_models.models import (
     G2PProgramDefinition,
     StatusEnum,
 )
+from openg2p_fastapi_common.schemas import G2PResponseStatus
 from sqlalchemy.orm import sessionmaker
 
 from ..app import celery_app, get_engine
@@ -98,9 +99,9 @@ def disbursement_worker(id: str):
 
             if (
                 disbursement_response
-                and hasattr(disbursement_response, "header")
-                and getattr(disbursement_response.header, "status", None)
-                == StatusEnumCommon.succ
+                and hasattr(disbursement_response, "response_header")
+                and getattr(disbursement_response.response_header, "response_status", None)
+                == G2PResponseStatus.SUCCESS
             ):
                 disbursement_batch.disbursement_number_of_attempts += 1
                 disbursement_batch.disbursement_processed_date = datetime.now(

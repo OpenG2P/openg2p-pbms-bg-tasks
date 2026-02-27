@@ -11,6 +11,7 @@ from openg2p_g2p_bridge_models.schemas import (
     DisbursementEnvelopeRequestBody,
     DisbursementPayload,
     DisbursementRequest,
+    DisbursementRequestBody,
     DisbursementResponse,
 )
 from openg2p_fastapi_common.schemas import G2PRequestHeader
@@ -28,7 +29,7 @@ class G2PBridgeDisbursementHelper:
         Sends a request to the bridge to create a disbursement envelope.
         """
         disbursement_envelope_request_header = G2PRequestHeader(
-            sender_app_mnemonic=self._config.sign_key_keymanager_app_id,
+            sender_app_mnemonic=self._config.keymanager_sign_app_id,
             sender_app_url="",
             request_id=uuid.uuid4().hex,
             request_timestamp=datetime.now(timezone.utc).isoformat(),
@@ -79,7 +80,6 @@ class G2PBridgeDisbursementHelper:
             self._logger.info(
                 f"Response status code for disbursement envelope request: {response.status_code}"
             )
-
             disbursement_envelope_response = (
                 DisbursementEnvelopeResponse.model_validate(response.json())
             )
@@ -119,7 +119,7 @@ class G2PBridgeDisbursementHelper:
             disbursement_payloads.append(disbursement_payload)
 
         disbursement_header = G2PRequestHeader(
-            sender_app_mnemonic=self._config.sign_key_keymanager_app_id,
+            sender_app_mnemonic=self._config.keymanager_sign_app_id,
             sender_app_url="",
             request_id="string",
             request_timestamp=datetime.now(timezone.utc).isoformat(),
