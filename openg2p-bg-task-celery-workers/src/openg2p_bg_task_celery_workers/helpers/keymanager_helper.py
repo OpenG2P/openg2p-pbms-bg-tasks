@@ -71,7 +71,7 @@ class KeymanagerHelper:
                 cookies=cookies,
                 timeout=getattr(self._config, "keymanager_api_timeout", 10),
             )
-        
+
         self._logger.debug("Keymanager JWT Sign API response: %s", response.json())
         response.raise_for_status()
         return ((response.json() or {}).get("response") or {}).get("jwtSignedData")

@@ -223,7 +223,9 @@ def construct_disbursement_envelopes(
     beneficiary_list, disbursement_envelope_response
 ) -> List[DisbursementEnvelope]:
     disbursement_envelopes: List[DisbursementEnvelope] = []
-    for disbursement_envelope_reponse_message in disbursement_envelope_response.response_body.response_payload:
+    for (
+        disbursement_envelope_reponse_message
+    ) in disbursement_envelope_response.response_body.response_payload:
         disbursement_envelope = DisbursementEnvelope(
             id=disbursement_envelope_reponse_message.id,
             beneficiary_list_id=beneficiary_list.beneficiary_list_id,
