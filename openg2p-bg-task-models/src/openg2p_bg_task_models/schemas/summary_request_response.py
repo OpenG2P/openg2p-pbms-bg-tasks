@@ -16,10 +16,12 @@ class SummaryRequestPayload(BaseModel):
     beneficiary_list_id: str
     target_registry: str
 
+class SummaryResponsePayload(BaseModel):
+    pass
 
 class SummaryResponsePayload(BaseModel):
     beneficiary_list_id: Optional[str] = None
-    summary: Optional[BeneficiaryListSummaryPayload] = None
+    summary: Optional[SummaryResponsePayload] = None
 
 
 class SummaryRequestBody(G2PRequestBody):
