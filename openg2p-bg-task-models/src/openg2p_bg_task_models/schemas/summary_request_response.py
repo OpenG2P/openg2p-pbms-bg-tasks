@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from openg2p_fastapi_common.schemas import (
     G2PRequest,
@@ -13,12 +13,10 @@ class SummaryRequestPayload(BaseModel):
     beneficiary_list_id: str
     target_registry: str
 
-class SummaryResponsePayloadBase(BaseModel):
-    pass
 
 class SummaryResponsePayload(BaseModel):
-    beneficiary_list_id: Optional[str] = None
-    summary: Optional[SummaryResponsePayloadBase] = None
+    beneficiary_list_id: str
+    summary: Optional[Any] = None
 
 
 class SummaryRequestBody(G2PRequestBody):
