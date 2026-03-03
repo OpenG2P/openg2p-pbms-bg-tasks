@@ -32,4 +32,5 @@ from .summary_request_response import (
     SummaryResponse,
     SummaryResponseBody,
     SummaryResponsePayload,
+    SummaryResponsePayloadBase
 )

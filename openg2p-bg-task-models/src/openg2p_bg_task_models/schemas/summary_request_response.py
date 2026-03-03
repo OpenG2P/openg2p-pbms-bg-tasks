@@ -1,8 +1,5 @@
 from typing import Optional
 
-from openg2p_bg_task_registry_adapters.schema import (
-    BeneficiaryListSummaryPayload,
-)
 from openg2p_fastapi_common.schemas import (
     G2PRequest,
     G2PRequestBody,
@@ -16,12 +13,12 @@ class SummaryRequestPayload(BaseModel):
     beneficiary_list_id: str
     target_registry: str
 
-class SummaryResponsePayload(BaseModel):
+class SummaryResponsePayloadBase(BaseModel):
     pass
 
 class SummaryResponsePayload(BaseModel):
     beneficiary_list_id: Optional[str] = None
-    summary: Optional[SummaryResponsePayload] = None
+    summary: Optional[SummaryResponsePayloadBase] = None
 
 
 class SummaryRequestBody(G2PRequestBody):
