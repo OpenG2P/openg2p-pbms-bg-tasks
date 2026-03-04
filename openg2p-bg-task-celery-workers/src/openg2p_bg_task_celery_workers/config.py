@@ -57,14 +57,17 @@ class Settings(BaseSettings):
     batch_size: int = 2000
     worker_max_attempts: int = 5
 
+    # TODO: refactor and remove
     sign_key_keymanager_app_id: str = "PBMS"
     sign_key_keymanager_ref_id: str = ""
 
-    keymanager_api_timeout: int = 10
     keymanager_api_base_url: str = ""
     keymanager_auth_enabled: bool = True
-
-    # TODO: auth -> oauth, remove 'keymanager'
     keymanager_auth_url: str = ""
     keymanager_auth_client_id: str = "openg2p-pbms"
     keymanager_auth_client_secret: str = ""
+    keymanager_api_domain: str = ""
+    keymanager_ssl_verify: bool = True
+    keymanager_api_timeout: int = 10
+    keymanager_sign_app_id: str = "OPENG2P_PBMS"
+    keymanager_sign_ref_id: str = ""

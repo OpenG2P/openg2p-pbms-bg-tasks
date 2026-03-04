@@ -1,8 +1,10 @@
 from typing import List, Optional
 
-from openg2p_g2pconnect_common_lib.schemas import (
-    Request,
-    SyncResponse,
+from openg2p_fastapi_common.schemas import (
+    G2PRequest,
+    G2PRequestBody,
+    G2PResponse,
+    G2PResponseBody,
 )
 from pydantic import BaseModel
 
@@ -16,9 +18,17 @@ class DisbursementBatchResponsePayload(BaseModel):
     disbursement_batches: List[dict]
 
 
-class DisbursementBatchRequest(Request):
-    message: DisbursementBatchRequestPayload
+class DisbursementBatchRequestBody(G2PRequestBody):
+    request_payload: DisbursementBatchRequestPayload
 
 
-class DisbursementBatchResponse(SyncResponse):
-    message: DisbursementBatchResponsePayload
+class DisbursementBatchResponseBody(G2PResponseBody):
+    response_payload: DisbursementBatchResponsePayload
+
+
+class DisbursementBatchRequest(G2PRequest):
+    request_body: DisbursementBatchRequestBody
+
+
+class DisbursementBatchResponse(G2PResponse):
+    response_body: DisbursementBatchResponseBody
