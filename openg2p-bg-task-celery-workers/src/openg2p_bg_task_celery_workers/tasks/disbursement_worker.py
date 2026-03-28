@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 from openg2p_bg_task_models.models import DisbursementBatch
-from openg2p_g2pconnect_common_lib.schemas import StatusEnum as StatusEnumCommon
+from openg2p_fastapi_common.schemas import G2PResponseStatus
 from openg2p_pbms_models.models import (
     G2PBeneficiaryList,
     G2PDisbursementCycle,
@@ -98,9 +98,11 @@ def disbursement_worker(id: str):
 
             if (
                 disbursement_response
-                and hasattr(disbursement_response, "header")
-                and getattr(disbursement_response.header, "status", None)
-                == StatusEnumCommon.succ
+                and hasattr(disbursement_response, "response_header")
+                and getattr(
+                    disbursement_response.response_header, "response_status", None
+                )
+                == G2PResponseStatus.SUCCESS
             ):
                 disbursement_batch.disbursement_number_of_attempts += 1
                 disbursement_batch.disbursement_processed_date = datetime.now(
