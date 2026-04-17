@@ -43,6 +43,7 @@ class KeymanagerHelper:
                 "Setting Authorization Cookie from Keymananger Auth Service"
             )
             cookies["Authorization"] = await self.get_keymanager_auth_token()
+
         current_time = self.get_current_isotimestamp()
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -70,7 +71,8 @@ class KeymanagerHelper:
                 cookies=cookies,
                 timeout=getattr(self._config, "keymanager_api_timeout", 10),
             )
-        self._logger.debug("Keymanager JWT Sign API response: %s", response.text)
+
+        self._logger.debug("Keymanager JWT Sign API response: %s", response.json())
         response.raise_for_status()
         return ((response.json() or {}).get("response") or {}).get("jwtSignedData")
 
